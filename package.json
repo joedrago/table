@@ -1,0 +1,26 @@
+{
+  "name": "table",
+  "version": "0.0.1",
+  "description": "Card Table",
+  "bin": {
+    "table-server": "./bin/server"
+  },
+  "scripts": {
+    "build": "cake build",
+    "watch": "cake watch"
+  },
+  "author": "Joe Drago",
+  "devDependencies": {
+    "browserify": "^16.5.0",
+    "coffeeify": "^3.0.1",
+    "coffeescript": "^2.4.1",
+    "node-watch": "^0.6.3",
+    "uglifyify": "^5.0.2"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.5",
+    "express": "^4.17.1",
+    "minimist": "^1.2.0",
+    "socket.io": "^2.3.0"
+  }
+}
