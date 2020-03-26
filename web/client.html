@@ -25,7 +25,7 @@
         position: fixed;
         left: 0px;
         top: 0px;
-        width: 400px;
+        width: 500px;
         height: 200px;
     }
 
@@ -52,8 +52,36 @@
         font-size: 1.4em;
     }
 
+    .playertricks {
+        font-size: 1.4em;
+    }
+
+    .playertricksyellow {
+        font-size: 1.4em;
+        color: #ffa;
+    }
+
+    .playertricksgreen {
+        font-size: 1.4em;
+        color: #afa;
+    }
+
+    .playertricksred {
+        font-size: 1.4em;
+        color: #faa;
+    }
+
     .playerbid {
         font-size: 1.4em;
+    }
+
+    .playerhand {
+        font-size: 1.4em;
+    }
+
+    .playerhandred {
+        font-size: 1.4em;
+        color: #ffa;
     }
 
     .adjust {
@@ -65,7 +93,7 @@
         position: fixed;
         left: 0px;
         bottom: 0px;
-        width: 400px;
+        width: 500px;
         height: 200px;
 
         background-color: #ccc;
@@ -133,10 +161,11 @@
         padding-top: 10px;
 
         border: 1px dashed black;
+        background-color: #111;
 
         text-align: center;
         font-size: 1.2em;
-        color: #fff;
+        color: #aaa;
     }
 
     .card {
@@ -165,15 +194,36 @@
         color: #fff;
     }
 
-    #pile {
-      background-color: #916f11;
-      width: 350px;
-      height: 250px;
+    #center {
       position: absolute;
+      width: 350px;
+      height: 300px;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
       z-index: -5;
+    }
+
+    #pile {
+      position: absolute;
+      right: 0px;
+      top: 0px;
+      width: 350px;
+      height: 250px;
+
+      background-color: #916f11;
+      border: 1px solid black;
+    }
+
+    #last {
+      position: absolute;
+      right: 0px;
+      bottom: 0px;
+      width: 350px;
+      height: 50px;
+
+      text-align: center;
+      color: #aaa;
     }
 
 </style>
@@ -194,7 +244,7 @@
 
 <div id="topright"></div>
 
-<div id="pile"></div>
+<div id="center"><div id="pile"></div><div id="last"></div></div>
 
 <script>
     window.table_playerID = "!PLAYERID!";

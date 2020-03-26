@@ -7,7 +7,7 @@ pile = []
 
 CARD_LEFT = 20
 CARD_TOP = 20
-CARD_SPACING = 30
+CARD_SPACING = 25
 CARD_IMAGE_W = 112
 CARD_IMAGE_H = 158
 CARD_IMAGE_ADV_X = CARD_IMAGE_W
@@ -25,6 +25,19 @@ prepareChat = ->
         type: 'chat'
         text: text
       }
+
+preloadedImages = []
+preloadImages = ->
+  imagesToPreload = [
+    "cards.png"
+    "dim.png"
+    "selected.png"
+  ]
+  for url in imagesToPreload
+    img = new Image()
+    img.src = url
+    preloadedImages.push img
+  return
 
 # returns true if you're NOT the owner
 mustBeOwner = ->
@@ -172,6 +185,13 @@ throwSelected = ->
     selected: selected
   }
 
+claimTrick = ->
+  socket.emit 'table', {
+    pid: playerID
+    tid: tableID
+    type: 'claimTrick'
+  }
+
 redrawHand = ->
   foundSelected = false
   for card, cardIndex in hand
@@ -186,10 +206,30 @@ redrawHand = ->
     card.element.style.left = "#{CARD_LEFT + (cardIndex * CARD_SPACING)}px"
     card.element.style.zIndex = "#{1 + cardIndex}"
 
+  playingCount = 0
+  for player in globalState.players
+    if player.playing
+      playingCount += 1
+
   throwHTML = ""
+  showThrow = false
+  showClaim = false
   if foundSelected
-    throwHTML = """
+    showThrow = true
+    if (globalState.mode == 'blackout') and (pile.length >= playingCount)
+      showThrow = false
+  if (globalState.mode == 'blackout') and (pile.length == playingCount)
+    showClaim = true
+
+  console.log "pile #{pile.length} playingcount #{playingCount} showClaim #{showClaim}"
+
+  if showThrow
+    throwHTML += """
       <a onclick="window.throwSelected()">[Throw]</a>
+    """
+  if showClaim
+    throwHTML += """
+      <a onclick="window.claimTrick()">[Claim Trick]</a>
     """
   document.getElementById('throw').innerHTML = throwHTML
   return
@@ -236,8 +276,34 @@ select = (raw) ->
   for card in hand
     if card.raw == raw
       card.selected = !card.selected
-      break
+    else
+      if globalState.mode == 'blackout'
+        card.selected = false
   redrawHand()
+
+swap = (raw) ->
+  # console.log "swap #{raw}"
+
+  swapIndex = -1
+  singleSelectionIndex = -1
+  for card, cardIndex in hand
+    if card.selected
+      if singleSelectionIndex == -1
+        singleSelectionIndex = cardIndex
+      else
+        # console.log "too many selected"
+        return
+    if card.raw == raw
+      swapIndex = cardIndex
+
+  # console.log "swapIndex #{swapIndex} singleSelectionIndex #{singleSelectionIndex}"
+  if (swapIndex != -1) and (singleSelectionIndex != -1)
+    # found a single card to move
+    pickup = hand.splice(singleSelectionIndex, 1)[0]
+    pickup.selected  = false
+    hand.splice(swapIndex, 0, pickup)
+    redrawHand()
+  return
 
 updateHand = ->
   inOldHand = {}
@@ -254,16 +320,25 @@ updateHand = ->
     else
       card.element.parentNode.removeChild(card.element)
 
+  gotNewCard = false
   handElement = document.getElementById('hand')
   for raw in globalState.hand
     if not inOldHand[raw]
+      gotNewCard = true
       element = document.createElement('div')
       element.setAttribute("id", "cardElement#{raw}")
       element.classList.add('card')
       # element.innerHTML = "#{raw}" # debug
       do (element, raw) ->
         element.addEventListener 'mousedown', (e) ->
-          select(raw)
+          if e.which == 3
+            swap(raw)
+          else
+            select(raw)
+          e.preventDefault()
+        element.addEventListener 'mouseup', (e) -> e.preventDefault()
+        element.addEventListener 'click', (e) -> e.preventDefault()
+        element.addEventListener 'contextmenu', (e) -> e.preventDefault()
       handElement.appendChild(element)
       newHand.push {
         raw: raw
@@ -272,18 +347,22 @@ updateHand = ->
       }
 
   hand = newHand
+  if gotNewCard
+    manipulateHand(globalState.mode)
   redrawHand()
 
-  manipHTML = ""
+  manipHTML = "<br>Sorting<br><br>"
   if hand.length > 1
+    if globalState.mode == 'thirteen'
+      manipHTML += """
+        <a onclick="window.manipulateHand('thirteen')">[Thirteen]</a><br><br>
+      """
+    if globalState.mode == 'blackout'
+      manipHTML += """
+        <a onclick="window.manipulateHand('blackout')">[Blackout]</a><br><br>
+      """
     manipHTML += """
-      <br>
-      <br>
-      <a onclick="window.manipulateHand('thirteen')">[Thirteen]</a><br>
-      <br>
-      <a onclick="window.manipulateHand('blackout')">[Blackout]</a><br>
-      <br>
-      <a onclick="window.manipulateHand('reverse')">[Reverse]</a><br>
+      <a onclick="window.manipulateHand('reverse')">[Reverse]</a><br><br>
     """
   document.getElementById('handmanip').innerHTML = manipHTML
 
@@ -336,6 +415,14 @@ updatePile = ->
     card.element.style.top = "#{card.y}px"
     card.element.style.left = "#{card.x}px"
     card.element.style.zIndex = "#{1 + cardIndex}"
+
+  lastHTML = ""
+  if globalState.pileWho.length > 0
+    if pile.length == 0
+      lastHTML = "Claimed by: #{globalState.pileWho}"
+    else
+      lastHTML = "Thrown by: #{globalState.pileWho}"
+  document.getElementById('last').innerHTML = lastHTML
   return
 
 
@@ -350,9 +437,12 @@ updateState = (newState) ->
 
   playerHTML += "<tr>"
   playerHTML += "<th>Name</th>"
-  playerHTML += "<th><a onclick=\"window.resetScores()\">Score</a></th>"
-  playerHTML += "<th><a onclick=\"window.resetBids()\">Bid</a></th>"
   playerHTML += "<th>Playing</th>"
+  playerHTML += "<th><a onclick=\"window.resetScores()\">Score</a></th>"
+  if globalState.mode == 'blackout'
+    playerHTML += "<th>Tricks</th>"
+    playerHTML += "<th><a onclick=\"window.resetBids()\">Bid</a></th>"
+  playerHTML += "<th>Hand</th>"
   playerHTML += "</tr>"
 
   playingCount = 0
@@ -378,24 +468,6 @@ updateState = (newState) ->
       playerHTML += "#{player.name}"
     playerHTML += "</td>"
 
-    # Score
-    playerHTML += "<td class=\"playerscore\">"
-    if globalState.owner == playerID
-      playerHTML += "<a class=\"adjust\" onclick=\"window.adjustScore('#{player.pid}', -1)\">&lt; </a>"
-    playerHTML += "#{player.score}"
-    if globalState.owner == playerID
-      playerHTML += "<a class=\"adjust\" onclick=\"window.adjustScore('#{player.pid}', 1)\"> &gt;</a>"
-    playerHTML += "</td>"
-
-    # Bid
-    playerHTML += "<td class=\"playerbid\">"
-    if globalState.owner == playerID
-      playerHTML += "<a class=\"adjust\" onclick=\"window.adjustBid('#{player.pid}', -1)\">&lt; </a>"
-    playerHTML += "#{player.bid}"
-    if globalState.owner == playerID
-      playerHTML += "<a class=\"adjust\" onclick=\"window.adjustBid('#{player.pid}', 1)\"> &gt;</a>"
-    playerHTML += "</td>"
-
     # Playing
     playerHTML += "<td class=\"playerplaying\">"
     playingEmoji = "&#x274C;"
@@ -407,6 +479,43 @@ updateState = (newState) ->
       playerHTML += "#{playingEmoji}"
     playerHTML += "</td>"
 
+    # Score
+    playerHTML += "<td class=\"playerscore\">"
+    if globalState.owner == playerID
+      playerHTML += "<a class=\"adjust\" onclick=\"window.adjustScore('#{player.pid}', -1)\">&lt; </a>"
+    playerHTML += "#{player.score}"
+    if globalState.owner == playerID
+      playerHTML += "<a class=\"adjust\" onclick=\"window.adjustScore('#{player.pid}', 1)\"> &gt;</a>"
+    playerHTML += "</td>"
+
+    # Bid
+    if globalState.mode == 'blackout'
+      tricksColor = ""
+      if player.tricks < player.bid
+        tricksColor = "yellow"
+      if player.tricks == player.bid
+        tricksColor = "green"
+      if player.tricks > player.bid
+        tricksColor = "red"
+      playerHTML += "<td class=\"playertricks#{tricksColor}\">"
+      playerHTML += "#{player.tricks}"
+      playerHTML += "</td>"
+      playerHTML += "<td class=\"playerbid\">"
+      if globalState.owner == playerID
+        playerHTML += "<a class=\"adjust\" onclick=\"window.adjustBid('#{player.pid}', -1)\">&lt; </a>"
+      playerHTML += "#{player.bid}"
+      if globalState.owner == playerID
+        playerHTML += "<a class=\"adjust\" onclick=\"window.adjustBid('#{player.pid}', 1)\"> &gt;</a>"
+      playerHTML += "</td>"
+
+    # Hand
+    handcolor = ""
+    if player.count == 0
+      handcolor = "red"
+    playerHTML += "<td class=\"playerhand#{handcolor}\">"
+    playerHTML += "#{player.count}"
+    playerHTML += "</td>"
+
     playerHTML += "</tr>"
   playerHTML += "</table>"
   document.getElementById('players').innerHTML = playerHTML
@@ -414,12 +523,16 @@ updateState = (newState) ->
   topright =
   toprightHTML = ""
   if globalState.owner == playerID
-    if (playingCount > 0) and (playingCount <= 4)
-      toprightHTML += "<a onclick=\"window.deal('all13')\">[Shuffle/Deal 13 to All]</a>"
+    if (playingCount >= 2) and (playingCount <= 5)
+      toprightHTML += "<a onclick=\"window.deal('thirteen')\">[Deal Thirteen]</a><br><br>"
+    if (playingCount == 3)
+      toprightHTML += "<a onclick=\"window.deal('seventeen')\">[Deal Seventeen]</a><br><br>"
+    if (playingCount >= 3) and (playingCount <= 5)
+      toprightHTML += "<a onclick=\"window.deal('blackout')\">[Deal Blackout]</a><br><br>"
   document.getElementById('topright').innerHTML = toprightHTML
 
-  updateHand()
   updatePile()
+  updateHand()
 
 
 init = ->
@@ -434,6 +547,7 @@ init = ->
   window.deal = deal
   window.manipulateHand = manipulateHand
   window.throwSelected = throwSelected
+  window.claimTrick = claimTrick
 
   console.log "Player ID: #{playerID}"
   console.log "Table ID: #{tableID}"
@@ -445,6 +559,7 @@ init = ->
   }
 
   prepareChat()
+  preloadImages()
 
   socket.on 'state', (newState) ->
     console.log "State: ", JSON.stringify(newState)

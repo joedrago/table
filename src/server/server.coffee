@@ -3,6 +3,8 @@ cookieParser = require 'cookie-parser'
 fs = require 'fs'
 Table = require './Table'
 
+DEBUG_HACKS = false
+
 randomString = ->
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 
@@ -50,6 +52,9 @@ main = ->
     pid = req.cookies.id
     if not pid?
       pid = randomString()
+    if DEBUG_HACKS and req.query.__p
+      pid = req.query.__p
+      console.log "Allowing hack pid: #{pid}"
     res.cookie('id', pid)
 
     tid = req.query.t
@@ -58,7 +63,7 @@ main = ->
       res.redirect("/?t=#{tid}")
       return
 
-    html = fs.readFileSync("#{__dirname}/../web/index.html", "utf8")
+    html = fs.readFileSync("#{__dirname}/../web/client.html", "utf8")
     html = html.replace(/!PLAYERID!/, pid)
     html = html.replace(/!TABLEID!/, tid)
     res.send(html)

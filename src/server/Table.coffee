@@ -1,9 +1,18 @@
 class ShuffledDeck
-  constructor: ->
+  constructor: (cardsToRemove = []) ->
+    cardsToRemoveMap = {}
+    for c in cardsToRemove
+      cardsToRemoveMap[c] = true
+
+    unshuffledDeck = []
+    for i in [0...52]
+      if not cardsToRemoveMap[i]
+        unshuffledDeck.push i
+
     # dat inside-out shuffle!
-    @cards = [ 0 ]
-    for i in [1...52]
-      j = Math.floor(Math.random() * i)
+    @cards = [ unshuffledDeck.shift() ]
+    for i, index in unshuffledDeck
+      j = Math.floor(Math.random() * (index + 1))
       @cards.push(@cards[j])
       @cards[j] = i
 
@@ -15,7 +24,9 @@ class Table
     @players = {}
     @owner = null
     @deck = new ShuffledDeck()
+    @mode = 'thirteen'
     @pile = []
+    @pileWho = ""
 
   log: (text) ->
     for pid, player of @players
@@ -40,6 +51,7 @@ class Table
         name: @anonymousName()
         score: 0
         bid: 0
+        tricks: 0
         playing: false
         hand: []
       }
@@ -60,25 +72,88 @@ class Table
     @broadcast()
 
   deal: (template) ->
+    playingCount = 0
+    for pid, player of @players
+      if player.playing
+        playingCount += 1
 
     switch template
-      when 'all13'
+
+      when 'thirteen'
+        @mode = 'thirteen'
         @pile = []
-        @deck = new ShuffledDeck()
-        playingCount = 0
-        for pid, player of @players
-          if player.playing
-            playingCount += 1
-        if playingCount > 4
+        @pileWho = ""
+        if playingCount > 5
           @log "ERROR: Too many players (#{playingCount}) to deal 13 to everyone."
           return
+        cardsToRemove = []
+        cardsToDeal = 13
+        fivePlayer = (playingCount == 5)
+        if fivePlayer
+          cardsToRemove = [6, 7]
+          cardsToDeal = 10
+        @deck = new ShuffledDeck(cardsToRemove)
         for pid, player of @players
+          player.hand = []
           if player.playing
-            player.hand = []
-            for j in [0...13]
+            for j in [0...cardsToDeal]
               player.hand.push @deck.cards.shift()
 
+        if fivePlayer
+          @log "Removed the red 2s and dealt 10 to everyone. (thirteen)"
+        else
+          @log "Dealt 13 to everyone. (thirteen)"
         @broadcast()
+
+      when 'seventeen'
+        @mode = 'thirteen'
+        @pile = []
+        @pileWho = ""
+        @deck = new ShuffledDeck([7]) # 2 of hearts
+        if playingCount != 3
+          @log "ERROR: You can only deal 17 to 3 players."
+          return
+        for pid, player of @players
+          player.hand = []
+          if player.playing
+            for j in [0...17]
+              player.hand.push @deck.cards.shift()
+
+        @log "Removed the 2 of hearts and dealt 17 to everyone. (thirteen)"
+        @broadcast()
+
+      when 'blackout'
+        @mode = 'blackout'
+        @pile = []
+        @pileWho = ""
+        if (playingCount < 3) or (playingCount > 5)
+          @log "ERROR: Blackout is a 3-5 player game."
+          return
+        cardsToRemove = []
+        cardsToDeal = 13
+        fivePlayer = (playingCount == 5)
+        if fivePlayer
+          cardsToRemove = [6, 7]
+          cardsToDeal = 10
+        @deck = new ShuffledDeck(cardsToRemove)
+        for pid, player of @players
+          player.hand = []
+          player.tricks = 0
+          if player.playing
+            for j in [0...cardsToDeal]
+              player.hand.push @deck.cards.shift()
+
+        if fivePlayer
+          @log "Removed the red 2s and dealt 10 to everyone. (blackout)"
+        else
+          @log "Dealt 13 to everyone. (blackout)"
+        @broadcast()
+
+      else
+        @log "ERROR: Unknown mode: #{template}"
+
+    return
+
 
 
   msg: (msg) ->
@@ -147,9 +222,39 @@ class Table
         if @players[msg.pid]? and (msg.pid == @owner) and msg.template?
           @deal(msg.template)
 
+      when 'claimTrick'
+        if @players[msg.pid]?
+          player = @players[msg.pid]
+          if @mode != 'blackout'
+            return
+          playingCount = 0
+          for pid, countingPlayer of @players
+            if countingPlayer.playing
+              playingCount += 1
+
+          if playingCount != @pile.length
+            @log "ERROR: You may not pick up an incomplete trick."
+            return
+
+          player.tricks += 1
+          @pile = []
+          @pileWho = player.name
+          @log "#{player.name} claims the trick."
+          @broadcast()
+
       when 'throwSelected'
         if @players[msg.pid]? and msg.selected? and (msg.selected.length > 0)
           player = @players[msg.pid]
+
+          if @mode == 'blackout'
+            playingCount = 0
+            for pid, countingPlayer of @players
+              if countingPlayer.playing
+                playingCount += 1
+
+            if playingCount == @pile.length
+              @log "ERROR: No more cards in this trick, someone must pick it up!"
+              return
 
           # make sure all selected cards exist in the player's hand
           for rawSelected in msg.selected
@@ -174,8 +279,14 @@ class Table
           player.hand = newHand
 
           # Add to the pile
-          pileX = Math.floor(Math.random() * 100)
-          pileY = Math.floor(Math.random() * 80)
+          if @mode == 'thirteen'
+            pileX = Math.floor(Math.random() * 100)
+            pileY = Math.floor(Math.random() * 80)
+          else
+            # Blackout
+            pileX = 10 + (@pile.length * 50)
+            pileY = 40
+
           for rawSelected, rawSelectedIndex in msg.selected
             @pile.push {
               raw: rawSelected
@@ -184,6 +295,7 @@ class Table
             }
 
           @log "#{player.name} throws #{msg.selected.length} card#{if msg.selected.length == 1 then "" else "s"}."
+          @pileWho = player.name
           @broadcast()
 
     return
@@ -197,6 +309,7 @@ class Table
           name: player.name
           score: player.score
           bid: player.bid
+          tricks: player.tricks
           playing: player.playing
           count: player.hand.length
         }
@@ -206,6 +319,8 @@ class Table
       owner: @owner
       players: players
       pile: @pile
+      pileWho: @pileWho
+      mode: @mode
 
     for pid, player of @players
       if player.socket != null

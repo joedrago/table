@@ -3,12 +3,24 @@
   var ShuffledDeck, Table;
 
   ShuffledDeck = class ShuffledDeck {
-    constructor() {
-      var i, j, k;
+    constructor(cardsToRemove = []) {
+      var c, cardsToRemoveMap, i, index, j, k, l, len, len1, m, unshuffledDeck;
+      cardsToRemoveMap = {};
+      for (k = 0, len = cardsToRemove.length; k < len; k++) {
+        c = cardsToRemove[k];
+        cardsToRemoveMap[c] = true;
+      }
+      unshuffledDeck = [];
+      for (i = l = 0; l < 52; i = ++l) {
+        if (!cardsToRemoveMap[i]) {
+          unshuffledDeck.push(i);
+        }
+      }
       // dat inside-out shuffle!
-      this.cards = [0];
-      for (i = k = 1; k < 52; i = ++k) {
-        j = Math.floor(Math.random() * i);
+      this.cards = [unshuffledDeck.shift()];
+      for (index = m = 0, len1 = unshuffledDeck.length; m < len1; index = ++m) {
+        i = unshuffledDeck[index];
+        j = Math.floor(Math.random() * (index + 1));
         this.cards.push(this.cards[j]);
         this.cards[j] = i;
       }
@@ -25,7 +37,9 @@
       this.players = {};
       this.owner = null;
       this.deck = new ShuffledDeck();
+      this.mode = 'thirteen';
       this.pile = [];
+      this.pileWho = "";
     }
 
     log(text) {
@@ -65,6 +79,7 @@
           name: this.anonymousName(),
           score: 0,
           bid: 0,
+          tricks: 0,
           playing: false,
           hand: []
         };
@@ -96,39 +111,112 @@
     }
 
     deal(template) {
-      var j, k, pid, player, playingCount, ref, ref1;
+      var cardsToDeal, cardsToRemove, fivePlayer, j, k, l, m, pid, player, playingCount, ref, ref1, ref2, ref3, ref4, ref5;
+      playingCount = 0;
+      ref = this.players;
+      for (pid in ref) {
+        player = ref[pid];
+        if (player.playing) {
+          playingCount += 1;
+        }
+      }
       switch (template) {
-        case 'all13':
+        case 'thirteen':
+          this.mode = 'thirteen';
           this.pile = [];
-          this.deck = new ShuffledDeck();
-          playingCount = 0;
-          ref = this.players;
-          for (pid in ref) {
-            player = ref[pid];
-            if (player.playing) {
-              playingCount += 1;
-            }
-          }
-          if (playingCount > 4) {
+          this.pileWho = "";
+          if (playingCount > 5) {
             this.log(`ERROR: Too many players (${playingCount}) to deal 13 to everyone.`);
             return;
           }
+          cardsToRemove = [];
+          cardsToDeal = 13;
+          fivePlayer = playingCount === 5;
+          if (fivePlayer) {
+            cardsToRemove = [6, 7];
+            cardsToDeal = 10;
+          }
+          this.deck = new ShuffledDeck(cardsToRemove);
           ref1 = this.players;
           for (pid in ref1) {
             player = ref1[pid];
+            player.hand = [];
             if (player.playing) {
-              player.hand = [];
-              for (j = k = 0; k < 13; j = ++k) {
+              for (j = k = 0, ref2 = cardsToDeal; (0 <= ref2 ? k < ref2 : k > ref2); j = 0 <= ref2 ? ++k : --k) {
                 player.hand.push(this.deck.cards.shift());
               }
             }
           }
-          return this.broadcast();
+          if (fivePlayer) {
+            this.log("Removed the red 2s and dealt 10 to everyone. (thirteen)");
+          } else {
+            this.log("Dealt 13 to everyone. (thirteen)");
+          }
+          this.broadcast();
+          break;
+        case 'seventeen':
+          this.mode = 'thirteen';
+          this.pile = [];
+          this.pileWho = "";
+          this.deck = new ShuffledDeck([7]); // 2 of hearts
+          if (playingCount !== 3) {
+            this.log("ERROR: You can only deal 17 to 3 players.");
+            return;
+          }
+          ref3 = this.players;
+          for (pid in ref3) {
+            player = ref3[pid];
+            player.hand = [];
+            if (player.playing) {
+              for (j = l = 0; l < 17; j = ++l) {
+                player.hand.push(this.deck.cards.shift());
+              }
+            }
+          }
+          this.log("Removed the 2 of hearts and dealt 17 to everyone. (thirteen)");
+          this.broadcast();
+          break;
+        case 'blackout':
+          this.mode = 'blackout';
+          this.pile = [];
+          this.pileWho = "";
+          if ((playingCount < 3) || (playingCount > 5)) {
+            this.log("ERROR: Blackout is a 3-5 player game.");
+            return;
+          }
+          cardsToRemove = [];
+          cardsToDeal = 13;
+          fivePlayer = playingCount === 5;
+          if (fivePlayer) {
+            cardsToRemove = [6, 7];
+            cardsToDeal = 10;
+          }
+          this.deck = new ShuffledDeck(cardsToRemove);
+          ref4 = this.players;
+          for (pid in ref4) {
+            player = ref4[pid];
+            player.hand = [];
+            player.tricks = 0;
+            if (player.playing) {
+              for (j = m = 0, ref5 = cardsToDeal; (0 <= ref5 ? m < ref5 : m > ref5); j = 0 <= ref5 ? ++m : --m) {
+                player.hand.push(this.deck.cards.shift());
+              }
+            }
+          }
+          if (fivePlayer) {
+            this.log("Removed the red 2s and dealt 10 to everyone. (blackout)");
+          } else {
+            this.log("Dealt 13 to everyone. (blackout)");
+          }
+          this.broadcast();
+          break;
+        default:
+          this.log(`ERROR: Unknown mode: ${template}`);
       }
     }
 
     msg(msg) {
-      var chat, found, k, l, len, len1, len2, len3, len4, m, n, newHand, o, pid, pileX, pileY, player, raw, rawSelected, rawSelectedIndex, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7;
+      var chat, countingPlayer, found, k, l, len, len1, len2, len3, len4, m, n, newHand, o, pid, pileX, pileY, player, playingCount, raw, rawSelected, rawSelectedIndex, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
       switch (msg.type) {
         case 'renamePlayer':
           if ((msg.name != null) && (this.players[msg.pid] != null)) {
@@ -218,17 +306,56 @@
             this.deal(msg.template);
           }
           break;
+        case 'claimTrick':
+          if (this.players[msg.pid] != null) {
+            player = this.players[msg.pid];
+            if (this.mode !== 'blackout') {
+              return;
+            }
+            playingCount = 0;
+            ref3 = this.players;
+            for (pid in ref3) {
+              countingPlayer = ref3[pid];
+              if (countingPlayer.playing) {
+                playingCount += 1;
+              }
+            }
+            if (playingCount !== this.pile.length) {
+              this.log("ERROR: You may not pick up an incomplete trick.");
+              return;
+            }
+            player.tricks += 1;
+            this.pile = [];
+            this.pileWho = player.name;
+            this.log(`${player.name} claims the trick.`);
+            this.broadcast();
+          }
+          break;
         case 'throwSelected':
           if ((this.players[msg.pid] != null) && (msg.selected != null) && (msg.selected.length > 0)) {
             player = this.players[msg.pid];
-            ref3 = msg.selected;
+            if (this.mode === 'blackout') {
+              playingCount = 0;
+              ref4 = this.players;
+              for (pid in ref4) {
+                countingPlayer = ref4[pid];
+                if (countingPlayer.playing) {
+                  playingCount += 1;
+                }
+              }
+              if (playingCount === this.pile.length) {
+                this.log("ERROR: No more cards in this trick, someone must pick it up!");
+                return;
+              }
+            }
+            ref5 = msg.selected;
             // make sure all selected cards exist in the player's hand
-            for (k = 0, len = ref3.length; k < len; k++) {
-              rawSelected = ref3[k];
+            for (k = 0, len = ref5.length; k < len; k++) {
+              rawSelected = ref5[k];
               found = false;
-              ref4 = player.hand;
-              for (l = 0, len1 = ref4.length; l < len1; l++) {
-                raw = ref4[l];
+              ref6 = player.hand;
+              for (l = 0, len1 = ref6.length; l < len1; l++) {
+                raw = ref6[l];
                 if (raw === rawSelected) {
                   found = true;
                   break;
@@ -241,13 +368,13 @@
             }
             // build a new hand with the selected cards absent
             newHand = [];
-            ref5 = player.hand;
-            for (m = 0, len2 = ref5.length; m < len2; m++) {
-              raw = ref5[m];
+            ref7 = player.hand;
+            for (m = 0, len2 = ref7.length; m < len2; m++) {
+              raw = ref7[m];
               found = false;
-              ref6 = msg.selected;
-              for (n = 0, len3 = ref6.length; n < len3; n++) {
-                rawSelected = ref6[n];
+              ref8 = msg.selected;
+              for (n = 0, len3 = ref8.length; n < len3; n++) {
+                rawSelected = ref8[n];
                 if (raw === rawSelected) {
                   found = true;
                 }
@@ -258,11 +385,17 @@
             }
             player.hand = newHand;
             // Add to the pile
-            pileX = Math.floor(Math.random() * 100);
-            pileY = Math.floor(Math.random() * 80);
-            ref7 = msg.selected;
-            for (rawSelectedIndex = o = 0, len4 = ref7.length; o < len4; rawSelectedIndex = ++o) {
-              rawSelected = ref7[rawSelectedIndex];
+            if (this.mode === 'thirteen') {
+              pileX = Math.floor(Math.random() * 100);
+              pileY = Math.floor(Math.random() * 80);
+            } else {
+              // Blackout
+              pileX = 10 + (this.pile.length * 50);
+              pileY = 40;
+            }
+            ref9 = msg.selected;
+            for (rawSelectedIndex = o = 0, len4 = ref9.length; o < len4; rawSelectedIndex = ++o) {
+              rawSelected = ref9[rawSelectedIndex];
               this.pile.push({
                 raw: rawSelected,
                 x: pileX + (rawSelectedIndex * 20),
@@ -270,6 +403,7 @@
               });
             }
             this.log(`${player.name} throws ${msg.selected.length} card${msg.selected.length === 1 ? "" : "s"}.`);
+            this.pileWho = player.name;
             this.broadcast();
           }
       }
@@ -287,6 +421,7 @@
             name: player.name,
             score: player.score,
             bid: player.bid,
+            tricks: player.tricks,
             playing: player.playing,
             count: player.hand.length
           });
@@ -296,7 +431,9 @@
         name: this.name,
         owner: this.owner,
         players: players,
-        pile: this.pile
+        pile: this.pile,
+        pileWho: this.pileWho,
+        mode: this.mode
       };
       ref1 = this.players;
       for (pid in ref1) {
