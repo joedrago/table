@@ -447,19 +447,14 @@ updatePile = ->
 
 updateSpots = ->
   playingCount = 0
-  iAmPlaying = false
   for player in globalState.players
     if player.playing
       playingCount += 1
-      if player.pid == playerID
-        iAmPlaying = true
-  if iAmPlaying
-    playingCount -= 1 # no spot for "you"
   spotIndices = switch playingCount
-    when 1 then [2]
-    when 2 then [0,4]
-    when 3 then [0,2,4]
-    when 4 then [0,1,3,4]
+    when 1 then [0]
+    when 2 then [0,3]
+    when 3 then [0,1,5]
+    when 4 then [0,1,3,5]
     when 5 then [0,1,2,3,4]
     else []
 
@@ -470,11 +465,15 @@ updateSpots = ->
     if not usedSpots[spotIndex]
       document.getElementById("spot#{spotIndex}").innerHTML = ""
 
-  nextSpot = 0
-  for player, playerIndex in globalState.players
+  playerIndexOffset = 0
+  for player, i in globalState.players
     if player.playing && (player.pid == playerID)
-      nextSpot = playerIndex + 1
-  for player in globalState.players
+      playerIndexOffset = i
+
+  nextSpot = 0
+  for i in [0...globalState.players.length]
+    playerIndex = (playerIndexOffset + i) % globalState.players.length
+    player = globalState.players[playerIndex]
     if player.playing
       clippedName = player.name
       if clippedName.length > 11
@@ -483,12 +482,8 @@ updateSpots = ->
         #{clippedName}<br>
         <span class="spothand">#{player.count}</span>
       """
-      if player.pid == playerID
-        spotIndex = 'P'
-      else
-        nextSpot = nextSpot % spotIndices.length
-        spotIndex = spotIndices[nextSpot]
-        nextSpot += 1
+      spotIndex = spotIndices[nextSpot]
+      nextSpot += 1
       document.getElementById("spot#{spotIndex}").innerHTML = spotHTML
 
 updateState = (newState) ->
