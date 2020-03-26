@@ -40,6 +40,7 @@
       this.mode = 'thirteen';
       this.pile = [];
       this.pileWho = "";
+      this.undo = null;
     }
 
     log(text) {
@@ -65,7 +66,7 @@
 
     anonymousName() {
       var name;
-      name = `Anonymous ${this.nextAnonymousID}`;
+      name = `Player${this.nextAnonymousID}`;
       this.nextAnonymousID += 1;
       return name;
     }
@@ -110,19 +111,26 @@
       return this.broadcast();
     }
 
-    deal(template) {
-      var cardsToDeal, cardsToRemove, fivePlayer, j, k, l, m, pid, player, playingCount, ref, ref1, ref2, ref3, ref4, ref5;
+    countPlaying() {
+      var pid, player, playingCount, ref;
       playingCount = 0;
       ref = this.players;
       for (pid in ref) {
         player = ref[pid];
-        if (player.playing) {
+        if (player.playing && (player.socket !== null)) {
           playingCount += 1;
         }
       }
+      return playingCount;
+    }
+
+    deal(template) {
+      var cardsToDeal, cardsToRemove, fivePlayer, j, k, l, m, pid, player, playingCount, ref, ref1, ref2, ref3, ref4;
+      playingCount = this.countPlaying();
       switch (template) {
         case 'thirteen':
           this.mode = 'thirteen';
+          this.undo = null;
           this.pile = [];
           this.pileWho = "";
           if (playingCount > 5) {
@@ -137,12 +145,12 @@
             cardsToDeal = 10;
           }
           this.deck = new ShuffledDeck(cardsToRemove);
-          ref1 = this.players;
-          for (pid in ref1) {
-            player = ref1[pid];
+          ref = this.players;
+          for (pid in ref) {
+            player = ref[pid];
             player.hand = [];
             if (player.playing) {
-              for (j = k = 0, ref2 = cardsToDeal; (0 <= ref2 ? k < ref2 : k > ref2); j = 0 <= ref2 ? ++k : --k) {
+              for (j = k = 0, ref1 = cardsToDeal; (0 <= ref1 ? k < ref1 : k > ref1); j = 0 <= ref1 ? ++k : --k) {
                 player.hand.push(this.deck.cards.shift());
               }
             }
@@ -156,6 +164,7 @@
           break;
         case 'seventeen':
           this.mode = 'thirteen';
+          this.undo = null;
           this.pile = [];
           this.pileWho = "";
           this.deck = new ShuffledDeck([7]); // 2 of hearts
@@ -163,9 +172,9 @@
             this.log("ERROR: You can only deal 17 to 3 players.");
             return;
           }
-          ref3 = this.players;
-          for (pid in ref3) {
-            player = ref3[pid];
+          ref2 = this.players;
+          for (pid in ref2) {
+            player = ref2[pid];
             player.hand = [];
             if (player.playing) {
               for (j = l = 0; l < 17; j = ++l) {
@@ -178,6 +187,7 @@
           break;
         case 'blackout':
           this.mode = 'blackout';
+          this.undo = null;
           this.pile = [];
           this.pileWho = "";
           if ((playingCount < 3) || (playingCount > 5)) {
@@ -192,13 +202,14 @@
             cardsToDeal = 10;
           }
           this.deck = new ShuffledDeck(cardsToRemove);
-          ref4 = this.players;
-          for (pid in ref4) {
-            player = ref4[pid];
+          ref3 = this.players;
+          for (pid in ref3) {
+            player = ref3[pid];
             player.hand = [];
             player.tricks = 0;
+            player.bid = 0;
             if (player.playing) {
-              for (j = m = 0, ref5 = cardsToDeal; (0 <= ref5 ? m < ref5 : m > ref5); j = 0 <= ref5 ? ++m : --m) {
+              for (j = m = 0, ref4 = cardsToDeal; (0 <= ref4 ? m < ref4 : m > ref4); j = 0 <= ref4 ? ++m : --m) {
                 player.hand.push(this.deck.cards.shift());
               }
             }
@@ -216,7 +227,7 @@
     }
 
     msg(msg) {
-      var chat, countingPlayer, found, k, l, len, len1, len2, len3, len4, m, n, newHand, o, pid, pileX, pileY, player, playingCount, raw, rawSelected, rawSelectedIndex, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9;
+      var card, chat, found, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap;
       switch (msg.type) {
         case 'renamePlayer':
           if ((msg.name != null) && (this.players[msg.pid] != null)) {
@@ -312,18 +323,18 @@
             if (this.mode !== 'blackout') {
               return;
             }
-            playingCount = 0;
-            ref3 = this.players;
-            for (pid in ref3) {
-              countingPlayer = ref3[pid];
-              if (countingPlayer.playing) {
-                playingCount += 1;
-              }
-            }
+            playingCount = this.countPlaying();
             if (playingCount !== this.pile.length) {
               this.log("ERROR: You may not pick up an incomplete trick.");
               return;
             }
+            this.undo = {
+              type: 'claim',
+              pile: this.pile,
+              pileWho: player.name,
+              pid: player.id,
+              tricks: player.tricks
+            };
             player.tricks += 1;
             this.pile = [];
             this.pileWho = player.name;
@@ -335,27 +346,20 @@
           if ((this.players[msg.pid] != null) && (msg.selected != null) && (msg.selected.length > 0)) {
             player = this.players[msg.pid];
             if (this.mode === 'blackout') {
-              playingCount = 0;
-              ref4 = this.players;
-              for (pid in ref4) {
-                countingPlayer = ref4[pid];
-                if (countingPlayer.playing) {
-                  playingCount += 1;
-                }
-              }
+              playingCount = this.countPlaying();
               if (playingCount === this.pile.length) {
                 this.log("ERROR: No more cards in this trick, someone must pick it up!");
                 return;
               }
             }
-            ref5 = msg.selected;
+            ref3 = msg.selected;
             // make sure all selected cards exist in the player's hand
-            for (k = 0, len = ref5.length; k < len; k++) {
-              rawSelected = ref5[k];
+            for (k = 0, len = ref3.length; k < len; k++) {
+              rawSelected = ref3[k];
               found = false;
-              ref6 = player.hand;
-              for (l = 0, len1 = ref6.length; l < len1; l++) {
-                raw = ref6[l];
+              ref4 = player.hand;
+              for (l = 0, len1 = ref4.length; l < len1; l++) {
+                raw = ref4[l];
                 if (raw === rawSelected) {
                   found = true;
                   break;
@@ -366,15 +370,22 @@
                 return;
               }
             }
+            this.undo = {
+              type: 'throw',
+              pileRemove: msg.selected,
+              pileWho: this.pileWho,
+              pid: player.id,
+              hand: player.hand
+            };
             // build a new hand with the selected cards absent
             newHand = [];
-            ref7 = player.hand;
-            for (m = 0, len2 = ref7.length; m < len2; m++) {
-              raw = ref7[m];
+            ref5 = player.hand;
+            for (m = 0, len2 = ref5.length; m < len2; m++) {
+              raw = ref5[m];
               found = false;
-              ref8 = msg.selected;
-              for (n = 0, len3 = ref8.length; n < len3; n++) {
-                rawSelected = ref8[n];
+              ref6 = msg.selected;
+              for (n = 0, len3 = ref6.length; n < len3; n++) {
+                rawSelected = ref6[n];
                 if (raw === rawSelected) {
                   found = true;
                 }
@@ -393,9 +404,9 @@
               pileX = 10 + (this.pile.length * 50);
               pileY = 40;
             }
-            ref9 = msg.selected;
-            for (rawSelectedIndex = o = 0, len4 = ref9.length; o < len4; rawSelectedIndex = ++o) {
-              rawSelected = ref9[rawSelectedIndex];
+            ref7 = msg.selected;
+            for (rawSelectedIndex = o = 0, len4 = ref7.length; o < len4; rawSelectedIndex = ++o) {
+              rawSelected = ref7[rawSelectedIndex];
               this.pile.push({
                 raw: rawSelected,
                 x: pileX + (rawSelectedIndex * 20),
@@ -404,6 +415,45 @@
             }
             this.log(`${player.name} throws ${msg.selected.length} card${msg.selected.length === 1 ? "" : "s"}.`);
             this.pileWho = player.name;
+            this.broadcast();
+          }
+          break;
+        case 'undo':
+          if ((this.players[msg.pid] != null) && (msg.pid === this.owner) && (this.undo !== null)) {
+            // console.log "performing undo: #{JSON.stringify(@undo)}"
+            if (this.undo.pile != null) {
+              this.pile = this.undo.pile;
+            } else if (this.undo.pileRemove != null) {
+              removeMap = {};
+              ref8 = this.undo.pileRemove;
+              for (p = 0, len5 = ref8.length; p < len5; p++) {
+                raw = ref8[p];
+                removeMap[raw] = true;
+              }
+              newPile = [];
+              ref9 = this.pile;
+              for (q = 0, len6 = ref9.length; q < len6; q++) {
+                card = ref9[q];
+                if (!removeMap[card.raw]) {
+                  newPile.push(card);
+                }
+              }
+              this.pile = newPile;
+            }
+            if (this.undo.pileWho != null) {
+              this.pileWho = this.undo.pileWho;
+            }
+            if ((this.undo.pid != null) && (this.players[this.undo.pid] != null)) {
+              player = this.players[this.undo.pid];
+              if (this.undo.hand != null) {
+                player.hand = this.undo.hand;
+              }
+              if (this.undo.tricks != null) {
+                player.tricks = this.undo.tricks;
+              }
+            }
+            this.log(`Performing undo of a ${this.undo.type}.`);
+            this.undo = null;
             this.broadcast();
           }
       }
@@ -433,7 +483,8 @@
         players: players,
         pile: this.pile,
         pileWho: this.pileWho,
-        mode: this.mode
+        mode: this.mode,
+        undo: this.undo !== null
       };
       ref1 = this.players;
       for (pid in ref1) {

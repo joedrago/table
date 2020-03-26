@@ -27,6 +27,7 @@ class Table
     @mode = 'thirteen'
     @pile = []
     @pileWho = ""
+    @undo = null
 
   log: (text) ->
     for pid, player of @players
@@ -37,7 +38,7 @@ class Table
     @age = new Date()
 
   anonymousName: ->
-    name = "Anonymous #{@nextAnonymousID}"
+    name = "Player#{@nextAnonymousID}"
     @nextAnonymousID += 1
     return name
 
@@ -71,16 +72,21 @@ class Table
           break
     @broadcast()
 
-  deal: (template) ->
+  countPlaying: ->
     playingCount = 0
     for pid, player of @players
-      if player.playing
+      if player.playing and (player.socket != null)
         playingCount += 1
+    return playingCount
+
+  deal: (template) ->
+    playingCount = @countPlaying()
 
     switch template
 
       when 'thirteen'
         @mode = 'thirteen'
+        @undo = null
         @pile = []
         @pileWho = ""
         if playingCount > 5
@@ -107,6 +113,7 @@ class Table
 
       when 'seventeen'
         @mode = 'thirteen'
+        @undo = null
         @pile = []
         @pileWho = ""
         @deck = new ShuffledDeck([7]) # 2 of hearts
@@ -124,6 +131,7 @@ class Table
 
       when 'blackout'
         @mode = 'blackout'
+        @undo = null
         @pile = []
         @pileWho = ""
         if (playingCount < 3) or (playingCount > 5)
@@ -139,6 +147,7 @@ class Table
         for pid, player of @players
           player.hand = []
           player.tricks = 0
+          player.bid = 0
           if player.playing
             for j in [0...cardsToDeal]
               player.hand.push @deck.cards.shift()
@@ -227,16 +236,20 @@ class Table
           player = @players[msg.pid]
           if @mode != 'blackout'
             return
-          playingCount = 0
-          for pid, countingPlayer of @players
-            if countingPlayer.playing
-              playingCount += 1
-
+          playingCount = @countPlaying()
           if playingCount != @pile.length
             @log "ERROR: You may not pick up an incomplete trick."
             return
 
+          @undo =
+            type: 'claim'
+            pile: @pile
+            pileWho: player.name
+            pid: player.id
+            tricks: player.tricks
+
           player.tricks += 1
+
           @pile = []
           @pileWho = player.name
           @log "#{player.name} claims the trick."
@@ -247,11 +260,7 @@ class Table
           player = @players[msg.pid]
 
           if @mode == 'blackout'
-            playingCount = 0
-            for pid, countingPlayer of @players
-              if countingPlayer.playing
-                playingCount += 1
-
+            playingCount = @countPlaying()
             if playingCount == @pile.length
               @log "ERROR: No more cards in this trick, someone must pick it up!"
               return
@@ -266,6 +275,13 @@ class Table
             if not found
               @log "ERROR: You can't throw what you dont have."
               return
+
+          @undo =
+            type: 'throw'
+            pileRemove: msg.selected
+            pileWho: @pileWho
+            pid: player.id
+            hand: player.hand
 
           # build a new hand with the selected cards absent
           newHand = []
@@ -298,6 +314,33 @@ class Table
           @pileWho = player.name
           @broadcast()
 
+      when 'undo'
+        if @players[msg.pid]? and (msg.pid == @owner) and (@undo != null)
+          # console.log "performing undo: #{JSON.stringify(@undo)}"
+          if @undo.pile?
+            @pile = @undo.pile
+          else if @undo.pileRemove?
+            removeMap = {}
+            for raw in @undo.pileRemove
+              removeMap[raw] = true
+            newPile = []
+            for card in @pile
+              if not removeMap[card.raw]
+                newPile.push card
+            @pile = newPile
+          if @undo.pileWho?
+            @pileWho = @undo.pileWho
+          if @undo.pid? and @players[@undo.pid]?
+            player = @players[@undo.pid]
+            if @undo.hand?
+              player.hand = @undo.hand
+            if @undo.tricks?
+              player.tricks = @undo.tricks
+
+          @log "Performing undo of a #{@undo.type}."
+          @undo = null
+          @broadcast()
+
     return
 
   broadcast: ->
@@ -321,6 +364,7 @@ class Table
       pile: @pile
       pileWho: @pileWho
       mode: @mode
+      undo: (@undo != null)
 
     for pid, player of @players
       if player.socket != null

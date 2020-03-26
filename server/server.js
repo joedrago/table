@@ -10,14 +10,19 @@
 
   Table = require('./Table');
 
-  DEBUG_HACKS = true;
+  DEBUG_HACKS = false;
 
   randomString = function() {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   };
 
   main = function() {
-    var app, http, io, socketInfo, tables;
+    var app, argv, http, io, socketInfo, tables;
+    argv = process.argv.slice(2);
+    if (argv.length > 0) {
+      console.log("Debug hacks enabled.");
+      DEBUG_HACKS = true;
+    }
     tables = {};
     socketInfo = {};
     app = express();

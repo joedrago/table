@@ -2,6 +2,7 @@
 <title>
 </title>
 <head>
+<link rel="shortcut icon" href="favicon.ico" />
 <style>
     body, html {
         display: flex;
@@ -25,22 +26,25 @@
         position: fixed;
         left: 0px;
         top: 0px;
-        width: 500px;
+        width: 600px;
         height: 200px;
     }
 
     .playertable {
         font-size: 1.2em;
-        width: 100%;
 
         color: #fff;
     }
 
     table.playertable th {
+        padding-left: 10px;
+        padding-right: 10px;
         text-align: left;
     }
 
     table.playertable td {
+        padding-left: 10px;
+        padding-right: 10px;
         text-align: left;
     }
 
@@ -94,7 +98,7 @@
         left: 0px;
         bottom: 0px;
         width: 500px;
-        height: 200px;
+        height: 40%;
 
         background-color: #ccc;
 
@@ -103,7 +107,7 @@
 
     #log {
         width: 100%;
-        height: 175px;
+        height: calc(100% - 25px);;
         background-color: #fff;
         border: none;
         resize: none;
@@ -189,6 +193,8 @@
         width: 400px;
         height: 200px;
         text-align: right;
+        padding-top: 10px;
+        padding-right: 10px;
 
         font-size: 1.2em;
         color: #fff;
@@ -196,8 +202,8 @@
 
     #center {
       position: absolute;
-      width: 350px;
-      height: 300px;
+      width: 550px;
+      height: 450px;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
@@ -206,25 +212,50 @@
 
     #pile {
       position: absolute;
-      right: 0px;
-      top: 0px;
+      left: 100px;
+      top: 100px;
       width: 350px;
       height: 250px;
 
-      background-color: #916f11;
+      background-color: #8c620d;
       border: 1px solid black;
     }
 
     #last {
       position: absolute;
-      right: 0px;
+      left: 0px;
       bottom: 0px;
       width: 350px;
-      height: 50px;
+      height: 20px;
 
       text-align: center;
-      color: #aaa;
+      font-style: italic;
+      color: #fff;
     }
+
+    .spot {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+
+      vertical-align: middle;
+      line-height: 50px;
+      text-align: center;
+      font-size: 1.2em;
+      color: #fff;
+    }
+
+    .spothand {
+      font-size: 2em;
+    }
+
+    #spotP { left: 225px; bottom: 0px; }
+
+    #spot0 { left: 0px; top: 175px; }
+    #spot1 { left: 115px; top: 0px; }
+    #spot2 { left: 225px; top: 0px; }
+    #spot3 { left: 335px; top: 0px; }
+    #spot4 { right: 0px; top: 175px; }
 
 </style>
 </head>
@@ -244,7 +275,7 @@
 
 <div id="topright"></div>
 
-<div id="center"><div id="pile"></div><div id="last"></div></div>
+<div id="center"><div id="pile"><div id="last"></div></div><div class="spot" id="spotP"></div><div class="spot" id="spot0"></div><div class="spot" id="spot1"></div><div class="spot" id="spot2"></div><div class="spot" id="spot3"></div><div class="spot" id="spot4"></div></div>
 
 <script>
     window.table_playerID = "!PLAYERID!";

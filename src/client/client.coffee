@@ -13,18 +13,28 @@ CARD_IMAGE_H = 158
 CARD_IMAGE_ADV_X = CARD_IMAGE_W
 CARD_IMAGE_ADV_Y = CARD_IMAGE_H
 
+sendChat = (text) ->
+  socket.emit 'table', {
+    pid: playerID
+    tid: tableID
+    type: 'chat'
+    text: text
+  }
+
+undo = ->
+  socket.emit 'table', {
+    pid: playerID
+    tid: tableID
+    type: 'undo'
+  }
+
 prepareChat = ->
   chat = document.getElementById('chat')
   chat.addEventListener 'keydown', (e) ->
     if e.keyCode == 13
       text = document.getElementById('chat').value
       document.getElementById('chat').value = ''
-      socket.emit 'table', {
-        pid: playerID
-        tid: tableID
-        type: 'chat'
-        text: text
-      }
+      sendChat(text)
 
 preloadedImages = []
 preloadImages = ->
@@ -221,7 +231,10 @@ redrawHand = ->
   if (globalState.mode == 'blackout') and (pile.length == playingCount)
     showClaim = true
 
-  console.log "pile #{pile.length} playingcount #{playingCount} showClaim #{showClaim}"
+  if globalState.mode == 'thirteen'
+    throwHTML += """
+      <a onclick="window.sendChat('** Passes **')">[Pass]     </a>
+    """
 
   if showThrow
     throwHTML += """
@@ -351,18 +364,25 @@ updateHand = ->
     manipulateHand(globalState.mode)
   redrawHand()
 
-  manipHTML = "<br>Sorting<br><br>"
+  manipHTML = "Sorting<br><br>"
   if hand.length > 1
     if globalState.mode == 'thirteen'
       manipHTML += """
-        <a onclick="window.manipulateHand('thirteen')">[Thirteen]</a><br><br>
+        <a onclick="window.manipulateHand('thirteen')">[Thirteen]</a><br>
       """
     if globalState.mode == 'blackout'
       manipHTML += """
-        <a onclick="window.manipulateHand('blackout')">[Blackout]</a><br><br>
+        <a onclick="window.manipulateHand('blackout')">[Blackout]</a><br>
       """
     manipHTML += """
-      <a onclick="window.manipulateHand('reverse')">[Reverse]</a><br><br>
+      <a onclick="window.manipulateHand('reverse')">[Reverse]</a><br>
+    """
+  manipHTML += "<br>"
+  if globalState.mode == 'thirteen'
+    manipHTML += """
+      ---<br>
+      S-C-D-H<br>
+      3 - 2<br>
     """
   document.getElementById('handmanip').innerHTML = manipHTML
 
@@ -425,6 +445,46 @@ updatePile = ->
   document.getElementById('last').innerHTML = lastHTML
   return
 
+updateSpots = ->
+  playingCount = 0
+  iAmPlaying = false
+  for player in globalState.players
+    if player.playing
+      playingCount += 1
+      if player.pid == playerID
+        iAmPlaying = true
+  if iAmPlaying
+    playingCount -= 1 # no spot for "you"
+  spotIndices = switch playingCount
+    when 1 then [2]
+    when 2 then [0,4]
+    when 3 then [0,2,4]
+    when 4 then [0,1,3,4]
+    when 5 then [0,1,2,3,4]
+    else []
+
+  usedSpots = {}
+  for spotIndex in spotIndices
+    usedSpots[spotIndex] = true
+  for spotIndex in [0..4]
+    if not usedSpots[spotIndex]
+      document.getElementById("spot#{spotIndex}").innerHTML = ""
+  nextSpot = 0
+  for player in globalState.players
+    if player.playing
+      clippedName = player.name
+      if clippedName.length > 11
+        clippedName = clippedName.substr(0, 8) + "..."
+      spotHTML = """
+        #{clippedName}<br>
+        <span class="spothand">#{player.count}</span>
+      """
+      if player.pid == playerID
+        spotIndex = 'P'
+      else
+        spotIndex = spotIndices[nextSpot]
+        nextSpot += 1
+      document.getElementById("spot#{spotIndex}").innerHTML = spotHTML
 
 updateState = (newState) ->
   globalState = newState
@@ -529,10 +589,13 @@ updateState = (newState) ->
       toprightHTML += "<a onclick=\"window.deal('seventeen')\">[Deal Seventeen]</a><br><br>"
     if (playingCount >= 3) and (playingCount <= 5)
       toprightHTML += "<a onclick=\"window.deal('blackout')\">[Deal Blackout]</a><br><br>"
+    if globalState.undo
+      toprightHTML += "<a onclick=\"window.undo()\">[Undo Last Throw/Claim]</a><br><br>"
   document.getElementById('topright').innerHTML = toprightHTML
 
   updatePile()
   updateHand()
+  updateSpots()
 
 
 init = ->
@@ -548,6 +611,8 @@ init = ->
   window.manipulateHand = manipulateHand
   window.throwSelected = throwSelected
   window.claimTrick = claimTrick
+  window.sendChat = sendChat
+  window.undo = undo
 
   console.log "Player ID: #{playerID}"
   console.log "Table ID: #{tableID}"
@@ -573,6 +638,7 @@ init = ->
           logdiv = document.getElementById("log")
           logdiv.value += "<#{player.name}> #{chat.text}\n"
           logdiv.scrollTop = logdiv.scrollHeight
+          new Audio('chat.mp3').play()
           break
     else
       logdiv = document.getElementById("log")
