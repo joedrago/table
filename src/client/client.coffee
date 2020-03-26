@@ -469,7 +469,11 @@ updateSpots = ->
   for spotIndex in [0..4]
     if not usedSpots[spotIndex]
       document.getElementById("spot#{spotIndex}").innerHTML = ""
+
   nextSpot = 0
+  for player, playerIndex in globalState.players
+    if player.playing && (player.pid == playerID)
+      nextSpot = playerIndex
   for player in globalState.players
     if player.playing
       clippedName = player.name
@@ -482,6 +486,7 @@ updateSpots = ->
       if player.pid == playerID
         spotIndex = 'P'
       else
+        nextSpot = nextSpot % spotIndices.length
         spotIndex = spotIndices[nextSpot]
         nextSpot += 1
       document.getElementById("spot#{spotIndex}").innerHTML = spotHTML
