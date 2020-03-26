@@ -473,7 +473,7 @@ updateSpots = ->
   nextSpot = 0
   for player, playerIndex in globalState.players
     if player.playing && (player.pid == playerID)
-      nextSpot = playerIndex
+      nextSpot = playerIndex + 1
   for player in globalState.players
     if player.playing
       clippedName = player.name
