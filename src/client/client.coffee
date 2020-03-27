@@ -463,15 +463,16 @@ updateSpots = ->
     when 2 then [0,3]
     when 3 then [0,1,5]
     when 4 then [0,1,3,5]
-    when 5 then [0,1,2,3,4]
+    when 5 then [0,1,2,4,5]
     else []
 
   usedSpots = {}
   for spotIndex in spotIndices
     usedSpots[spotIndex] = true
-  for spotIndex in [0..4]
+  for spotIndex in [0..5]
     if not usedSpots[spotIndex]
       document.getElementById("spot#{spotIndex}").innerHTML = ""
+      document.getElementById("spot#{spotIndex}").classList.remove("spotHighlight")
 
   playerIndexOffset = 0
   for player, i in globalState.players
