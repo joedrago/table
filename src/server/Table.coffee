@@ -41,7 +41,7 @@ prettyCardList = (rawList) ->
 class Table
   constructor: (@id) ->
     @nextAnonymousID = 1
-    @name = "Generic Table"
+    @name = "Unnamed Table"
     @resetAge()
     @players = {}
     @owner = null
