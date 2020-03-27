@@ -372,13 +372,13 @@
             this.undo = {
               type: 'claim',
               pile: this.pile,
-              pileWho: player.name,
+              pileWho: player.id,
               pid: player.id,
               tricks: player.tricks
             };
             player.tricks += 1;
             this.pile = [];
-            this.pileWho = player.name;
+            this.pileWho = player.id;
             this.log(`${player.name} claims the trick.`);
             this.broadcast();
           }
@@ -455,7 +455,7 @@
               });
             }
             this.log(`${player.name} throws: ${prettyCardList(msg.selected)}`);
-            this.pileWho = player.name;
+            this.pileWho = player.id;
             this.broadcast();
           }
           break;

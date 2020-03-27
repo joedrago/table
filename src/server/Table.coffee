@@ -266,14 +266,14 @@ class Table
           @undo =
             type: 'claim'
             pile: @pile
-            pileWho: player.name
+            pileWho: player.id
             pid: player.id
             tricks: player.tricks
 
           player.tricks += 1
 
           @pile = []
-          @pileWho = player.name
+          @pileWho = player.id
           @log "#{player.name} claims the trick."
           @broadcast()
 
@@ -333,7 +333,7 @@ class Table
             }
 
           @log "#{player.name} throws: #{prettyCardList(msg.selected)}"
-          @pileWho = player.name
+          @pileWho = player.id
           @broadcast()
 
       when 'undo'

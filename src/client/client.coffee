@@ -438,10 +438,15 @@ updatePile = ->
 
   lastHTML = ""
   if globalState.pileWho.length > 0
-    if pile.length == 0
-      lastHTML = "Claimed by: #{globalState.pileWho}"
-    else
-      lastHTML = "Thrown by: #{globalState.pileWho}"
+    whoPlayer = null
+    for player in globalState.players
+      if player.pid == globalState.pileWho
+        whoPlayer = player
+    if whoPlayer != null
+      if pile.length == 0
+        lastHTML = "Claimed by: #{whoPlayer.name}"
+      else
+        lastHTML = "Thrown by: #{whoPlayer.name}"
   document.getElementById('last').innerHTML = lastHTML
   return
 
@@ -484,7 +489,12 @@ updateSpots = ->
       """
       spotIndex = spotIndices[nextSpot]
       nextSpot += 1
-      document.getElementById("spot#{spotIndex}").innerHTML = spotHTML
+      spotElement = document.getElementById("spot#{spotIndex}")
+      spotElement.innerHTML = spotHTML
+      if player.pid == globalState.pileWho
+        spotElement.classList.add("spotHighlight")
+      else
+        spotElement.classList.remove("spotHighlight")
 
 updateState = (newState) ->
   globalState = newState
