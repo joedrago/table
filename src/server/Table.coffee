@@ -16,6 +16,28 @@ class ShuffledDeck
       @cards.push(@cards[j])
       @cards[j] = i
 
+prettyCardList = (rawList) ->
+  text = ""
+  for raw in rawList
+    if text.length > 0
+      text += ", "
+    rank = Math.floor(raw / 4)
+    rankText = switch rank
+      when  0 then 'A'
+      when 10 then 'J'
+      when 11 then 'Q'
+      when 12 then 'K'
+      else String(rank+1)
+    suit = Math.floor(raw % 4)
+    suitText = switch suit
+      when 0 then 'S'
+      when 1 then 'C'
+      when 2 then 'D'
+      when 3 then 'H'
+    text += "#{rankText}#{suitText}"
+  return text
+
+
 class Table
   constructor: (@id) ->
     @nextAnonymousID = 1
@@ -101,7 +123,7 @@ class Table
         @deck = new ShuffledDeck(cardsToRemove)
         for pid, player of @players
           player.hand = []
-          if player.playing
+          if player.playing and (player.socket != null)
             for j in [0...cardsToDeal]
               player.hand.push @deck.cards.shift()
 
@@ -122,7 +144,7 @@ class Table
           return
         for pid, player of @players
           player.hand = []
-          if player.playing
+          if player.playing and (player.socket != null)
             for j in [0...17]
               player.hand.push @deck.cards.shift()
 
@@ -148,7 +170,7 @@ class Table
           player.hand = []
           player.tricks = 0
           player.bid = 0
-          if player.playing
+          if player.playing and (player.socket != null)
             for j in [0...cardsToDeal]
               player.hand.push @deck.cards.shift()
 
@@ -310,7 +332,7 @@ class Table
               y: pileY
             }
 
-          @log "#{player.name} throws #{msg.selected.length} card#{if msg.selected.length == 1 then "" else "s"}."
+          @log "#{player.name} throws: #{prettyCardList(msg.selected)}"
           @pileWho = player.name
           @broadcast()
 
