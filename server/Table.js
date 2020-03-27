@@ -73,7 +73,7 @@
     constructor(id) {
       this.id = id;
       this.nextAnonymousID = 1;
-      this.name = "Generic Table";
+      this.name = "Unnamed Table";
       this.resetAge();
       this.players = {};
       this.owner = null;
