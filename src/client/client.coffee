@@ -28,6 +28,9 @@ undo = ->
     type: 'undo'
   }
 
+reconnect = ->
+  socket.open()
+
 prepareChat = ->
   chat = document.getElementById('chat')
   chat.addEventListener 'keydown', (e) ->
@@ -590,38 +593,41 @@ updateState = (newState) ->
   playerHTML += "</table>"
   document.getElementById('players').innerHTML = playerHTML
 
-  topright =
-  toprightHTML = ""
+  admin =
+  adminHTML = ""
   if globalState.owner == playerID
     if (playingCount >= 2) and (playingCount <= 5)
-      toprightHTML += "<a onclick=\"window.deal('thirteen')\">[Deal Thirteen]</a><br><br>"
+      adminHTML += "<a onclick=\"window.deal('thirteen')\">[Deal Thirteen]</a><br><br>"
     if (playingCount == 3)
-      toprightHTML += "<a onclick=\"window.deal('seventeen')\">[Deal Seventeen]</a><br><br>"
+      adminHTML += "<a onclick=\"window.deal('seventeen')\">[Deal Seventeen]</a><br><br>"
     if (playingCount >= 3) and (playingCount <= 5)
-      toprightHTML += "<a onclick=\"window.deal('blackout')\">[Deal Blackout]</a><br><br>"
+      adminHTML += "<a onclick=\"window.deal('blackout')\">[Deal Blackout]</a><br><br>"
     if globalState.undo
-      toprightHTML += "<a onclick=\"window.undo()\">[Undo Last Throw/Claim]</a><br><br>"
-  document.getElementById('topright').innerHTML = toprightHTML
+      adminHTML += "<a onclick=\"window.undo()\">[Undo Last Throw/Claim]</a><br><br>"
+  document.getElementById('admin').innerHTML = adminHTML
 
   updatePile()
   updateHand()
   updateSpots()
 
+setConnectionStatus = (status, color = '#ffffff') ->
+  document.getElementById('connection').innerHTML = "<a onclick=\"window.reconnect()\"><span style=\"color: #{color}\">#{status}</span></a>"
 
 init = ->
-  window.changeOwner = changeOwner
-  window.renameSelf = renameSelf
-  window.renameTable = renameTable
-  window.adjustScore = adjustScore
   window.adjustBid = adjustBid
-  window.resetBids = resetBids
-  window.resetScores = resetScores
-  window.togglePlaying = togglePlaying
+  window.adjustScore = adjustScore
+  window.changeOwner = changeOwner
+  window.claimTrick = claimTrick
   window.deal = deal
   window.manipulateHand = manipulateHand
-  window.throwSelected = throwSelected
-  window.claimTrick = claimTrick
+  window.reconnect = reconnect
+  window.renameSelf = renameSelf
+  window.renameTable = renameTable
+  window.resetBids = resetBids
+  window.resetScores = resetScores
   window.sendChat = sendChat
+  window.throwSelected = throwSelected
+  window.togglePlaying = togglePlaying
   window.undo = undo
 
   console.log "Player ID: #{playerID}"
@@ -639,6 +645,13 @@ init = ->
   socket.on 'state', (newState) ->
     console.log "State: ", JSON.stringify(newState)
     updateState(newState)
+
+  socket.on 'connect', (error) ->
+    setConnectionStatus("Connected")
+  socket.on 'disconnect', ->
+    setConnectionStatus("Disconnected", '#ff0000')
+  socket.on 'reconnecting', (attemptNumber) ->
+    setConnectionStatus("Connecting... (#{attemptNumber})", '#ffff00')
 
   socket.on 'chat', (chat) ->
     console.log "<#{chat.pid}> #{chat.text}"
