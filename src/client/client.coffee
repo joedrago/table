@@ -644,6 +644,8 @@ init = ->
       logdiv = document.getElementById("log")
       logdiv.value += "*** #{chat.text}\n"
       logdiv.scrollTop = logdiv.scrollHeight
+      if chat.text.match(/throws:/)
+        new Audio('throw.mp3').play()
 
 
   # All done!
