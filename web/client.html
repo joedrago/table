@@ -8,7 +8,7 @@
         display: flex;
         margin: 0px;
         padding: 0px;
-        background-color: #030;
+        background-color: #223;
 
         font-family: monospace;
 
@@ -137,12 +137,24 @@
         height: 250px;
     }
 
-    #throw {
+    #throwL {
         position: absolute;
-        width: 700px;
-        height: 50px;
-        top: 0px;
+        width: 350px;
+        height: 40px;
+        top: 10px;
         left: 0px;
+        line-height: 50px;
+        text-align: left;
+    }
+
+    #throwR {
+        position: absolute;
+        width: 340px;
+        height: 40px;
+        top: 10px;
+        left: 350px;
+        line-height: 50px;
+        text-align: right;
     }
 
     #hand {
@@ -180,12 +192,6 @@
         padding: 0px;
     }
 
-    #throw {
-        font-size: 2em;
-        font-weight: 900;
-        color: #fa0;
-    }
-
     #topright {
         position: fixed;
         right: 0px;
@@ -195,7 +201,9 @@
         text-align: right;
         padding-top: 10px;
         padding-right: 10px;
+    }
 
+    #connection {
         font-size: 1.2em;
         color: #fff;
     }
@@ -216,13 +224,14 @@
 
     #pile {
       position: absolute;
-      left: 100px;
-      top: 100px;
-      width: 350px;
-      height: 250px;
+      left: 105px;
+      top: 105px;
+      width: 340px;
+      height: 240px;
 
-      background-color: #8c620d;
+      background-color: #050;
       border: 1px solid black;
+      border-radius: 20px;
     }
 
     #last {
@@ -242,8 +251,10 @@
       width: 100px;
       height: 100px;
 
+      border-radius: 20px;
+
       vertical-align: middle;
-      line-height: 50px;
+      line-height: 45px;
       text-align: center;
       font-size: 1.2em;
       color: #fff;
@@ -253,8 +264,73 @@
       font-size: 2em;
     }
 
+    .spotActive {
+        border: 1px solid #000;
+        background-color: #444;
+    }
+
     .spotHighlight {
-        background-color: #040;
+        background-color: #26a;
+    }
+
+    .spotPassL {
+        display: none;
+        position: absolute;
+        background: #ffffff;
+        border-radius: .4em;
+
+        width: 120px;
+        height: 60px;
+        line-height: 60px;
+        text-align: center;
+        font-size: 2.5em;
+        font-family: Impact, Times, monospace;
+        font-weight: 900;
+        color: #003366;
+    }
+
+    .spotPassL:after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 50%;
+        width: 0;
+        height: 0;
+        border: 20px solid transparent;
+        border-left-color: #ffffff;
+        border-right: 0;
+        margin-top: -20px;
+        margin-right: -10px;
+    }
+
+    .spotPassR {
+        display: none;
+        position: absolute;
+        background: #ffffff;
+        border-radius: .4em;
+
+        width: 120px;
+        height: 60px;
+        line-height: 60px;
+        text-align: center;
+        font-size: 2.5em;
+        font-family: Impact, Times, monospace;
+        font-weight: 900;
+        color: #003366;
+    }
+
+    .spotPassR:after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 0;
+        height: 0;
+        border: 20px solid transparent;
+        border-right-color: #ffffff;
+        border-left: 0;
+        margin-top: -20px;
+        margin-left: -10px;
     }
 
     #spot0 { left: 225px; bottom: 0px; }
@@ -264,6 +340,42 @@
     #spot4 { left: 335px; top: 0px; }
     #spot5 { right: 0px; top: 175px; }
 
+    #spotPass0 { left: 90px; bottom: 20px; }
+    #spotPass1 { left: -135px; top: 195px; }
+    #spotPass2 { left: -20px; top: 20px; }
+    #spotPass3 { left: 90px; top: 20px; }
+    #spotPass4 { left: 450px; top: 20px; }
+    #spotPass5 { right: -135px; top: 195px; }
+
+    .button {
+        display: inline-block;
+        outline: none;
+        cursor: pointer;
+        border: solid 1px #699;
+        text-align: center;
+        text-decoration: none;
+        font: 1em/100% monospace;
+        padding: .5em 2em .55em;
+        text-shadow: 0 1px 1px rgba(0,0,0,.3);
+        -webkit-border-radius: .5em;
+        -moz-border-radius: .5em;
+        border-radius: .3em;
+        -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+        -moz-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+        box-shadow: 0 1px 2px rgba(0,0,0,.2);
+
+        color: #ffffff;
+        background-color: #594d31;
+
+        width: 120px;
+    }
+    .button:hover {
+        background-color: #756642;
+    }
+    .button:active {
+        position: relative;
+        top: 1px;
+    }
 </style>
 </head>
 <body>
@@ -278,11 +390,11 @@
     <input type="text" value="" autocomplete="off" placeholder="Chat here..." id="chat"></input>
 </div>
 
-<div id="bottomright"><div id="throw"></div><div id="hand"></div><div id="handmanip"></div></div>
+<div id="bottomright"><div id="throwL"></div><div id="throwR"></div><div id="hand"></div><div id="handmanip"></div></div>
 
 <div id="topright"><div id="connection"></div><div id="admin"></div></div>
 
-<div id="center"><div id="pile"><div id="last"></div></div><div class="spot" id="spot0"></div><div class="spot" id="spot1"></div><div class="spot" id="spot2"></div><div class="spot" id="spot3"></div><div class="spot" id="spot4"></div><div class="spot" id="spot5"></div></div>
+<div id="center"><div id="pile"><div id="last"></div></div><div class="spotPassL" id="spotpass0">Pass!</div><div class="spotPassL" id="spotpass1">Pass!</div><div class="spotPassL" id="spotpass2">Pass!</div><div class="spotPassL" id="spotpass3">Pass!</div><div class="spotPassR" id="spotpass4">Pass!</div><div class="spotPassR" id="spotpass5">Pass!</div><div class="spot" id="spot0"></div><div class="spot" id="spot1"></div><div class="spot" id="spot2"></div><div class="spot" id="spot3"></div><div class="spot" id="spot4"></div><div class="spot" id="spot5"></div></div>
 
 <script>
     window.table_playerID = "!PLAYERID!";

@@ -338,6 +338,15 @@ class Table
           @pileWho = player.id
           @broadcast()
 
+      when 'pass'
+        if @players[msg.pid]? and @players[msg.pid].playing
+          @log "#{@players[msg.pid].name} passes."
+          for pid, player of @players
+            if player.socket != null
+              player.socket.emit 'pass', {
+                pid: msg.pid
+              }
+
       when 'undo'
         if @players[msg.pid]? and (msg.pid == @owner) and (@undo.length > 0)
           # console.log "performing undo: #{JSON.stringify(@undo)}"

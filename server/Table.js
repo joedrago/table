@@ -268,7 +268,7 @@
     }
 
     msg(msg) {
-      var card, chat, found, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playerName, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap, u;
+      var card, chat, found, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playerName, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap, u;
       switch (msg.type) {
         case 'renamePlayer':
           if ((msg.name != null) && (this.players[msg.pid] != null)) {
@@ -459,6 +459,20 @@
             this.broadcast();
           }
           break;
+        case 'pass':
+          if ((this.players[msg.pid] != null) && this.players[msg.pid].playing) {
+            this.log(`${this.players[msg.pid].name} passes.`);
+            ref8 = this.players;
+            for (pid in ref8) {
+              player = ref8[pid];
+              if (player.socket !== null) {
+                player.socket.emit('pass', {
+                  pid: msg.pid
+                });
+              }
+            }
+          }
+          break;
         case 'undo':
           if ((this.players[msg.pid] != null) && (msg.pid === this.owner) && (this.undo.length > 0)) {
             // console.log "performing undo: #{JSON.stringify(@undo)}"
@@ -467,15 +481,15 @@
               this.pile = u.pile;
             } else if (u.pileRemove != null) {
               removeMap = {};
-              ref8 = u.pileRemove;
-              for (p = 0, len5 = ref8.length; p < len5; p++) {
-                raw = ref8[p];
+              ref9 = u.pileRemove;
+              for (p = 0, len5 = ref9.length; p < len5; p++) {
+                raw = ref9[p];
                 removeMap[raw] = true;
               }
               newPile = [];
-              ref9 = this.pile;
-              for (q = 0, len6 = ref9.length; q < len6; q++) {
-                card = ref9[q];
+              ref10 = this.pile;
+              for (q = 0, len6 = ref10.length; q < len6; q++) {
+                card = ref10[q];
                 if (!removeMap[card.raw]) {
                   newPile.push(card);
                 }

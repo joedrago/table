@@ -13,6 +13,24 @@ CARD_IMAGE_H = 158
 CARD_IMAGE_ADV_X = CARD_IMAGE_W
 CARD_IMAGE_ADV_Y = CARD_IMAGE_H
 
+passBubbleTimeouts = new Array(6).fill(null)
+passBubble = (spotIndex) ->
+  el = document.getElementById("spotpass#{spotIndex}")
+  el.style.display = 'block'
+  el.style.opacity = 1
+
+  if passBubbleTimeouts[spotIndex]
+    clearTimeout(passBubbleTimeouts[spotIndex])
+
+  passBubbleTimeouts[spotIndex] = setTimeout(->
+    fade = ->
+      if ((el.style.opacity -= .1) < 0)
+        el.style.display = "none";
+      else
+        passBubbleTimeouts[spotIndex] = setTimeout(fade, 40);
+    fade()
+  , 500)
+
 sendChat = (text) ->
   socket.emit 'table', {
     pid: playerID
@@ -205,6 +223,13 @@ claimTrick = ->
     type: 'claimTrick'
   }
 
+pass = ->
+  socket.emit 'table', {
+    pid: playerID
+    tid: tableID
+    type: 'pass'
+  }
+
 redrawHand = ->
   foundSelected = false
   for card, cardIndex in hand
@@ -224,7 +249,8 @@ redrawHand = ->
     if player.playing
       playingCount += 1
 
-  throwHTML = ""
+  throwL = ""
+  throwR = ""
   showThrow = false
   showClaim = false
   if foundSelected
@@ -235,19 +261,20 @@ redrawHand = ->
     showClaim = true
 
   if globalState.mode == 'thirteen'
-    throwHTML += """
-      <a onclick="window.sendChat('** Passes **')">[Pass]     </a>
+    throwR += """
+      <a class=\"button\" onclick="window.pass()">Pass     </a>
     """
 
   if showThrow
-    throwHTML += """
-      <a onclick="window.throwSelected()">[Throw]</a>
+    throwL += """
+      <a class=\"button\" onclick="window.throwSelected()">Throw</a>
     """
   if showClaim
-    throwHTML += """
-      <a onclick="window.claimTrick()">[Claim Trick]</a>
+    throwL += """
+      <a class=\"button\" onclick="window.claimTrick()">Claim Trick</a>
     """
-  document.getElementById('throw').innerHTML = throwHTML
+  document.getElementById('throwL').innerHTML = throwL
+  document.getElementById('throwR').innerHTML = throwR
   return
 
 thirteenSortRankSuit = (raw) ->
@@ -453,7 +480,7 @@ updatePile = ->
   document.getElementById('last').innerHTML = lastHTML
   return
 
-updateSpots = ->
+calcSpotIndices = ->
   playingCount = 0
   for player in globalState.players
     if player.playing
@@ -465,14 +492,40 @@ updateSpots = ->
     when 4 then [0,1,3,5]
     when 5 then [0,1,2,4,5]
     else []
+  return spotIndices
 
+getSpotIndex = (pid) ->
+  spotIndices = calcSpotIndices()
+
+  playerIndexOffset = 0
+  for player, i in globalState.players
+    if player.playing && (player.pid == playerID)
+      playerIndexOffset = i
+
+  nextSpot = 0
+  for i in [0...globalState.players.length]
+    playerIndex = (playerIndexOffset + i) % globalState.players.length
+    player = globalState.players[playerIndex]
+    if player.playing
+      spotIndex = spotIndices[nextSpot]
+      nextSpot += 1
+      if (player.pid == pid)
+        return spotIndex
+  return -1
+
+updateSpots = ->
+  spotIndices = calcSpotIndices()
+
+  # Clear all unused spots
   usedSpots = {}
   for spotIndex in spotIndices
     usedSpots[spotIndex] = true
   for spotIndex in [0..5]
     if not usedSpots[spotIndex]
-      document.getElementById("spot#{spotIndex}").innerHTML = ""
-      document.getElementById("spot#{spotIndex}").classList.remove("spotHighlight")
+      spotElement = document.getElementById("spot#{spotIndex}")
+      spotElement.innerHTML = ""
+      spotElement.classList.remove("spotActive")
+      spotElement.classList.remove("spotHighlight")
 
   playerIndexOffset = 0
   for player, i in globalState.players
@@ -495,6 +548,7 @@ updateSpots = ->
       nextSpot += 1
       spotElement = document.getElementById("spot#{spotIndex}")
       spotElement.innerHTML = spotHTML
+      spotElement.classList.add("spotActive")
       if player.pid == globalState.pileWho
         spotElement.classList.add("spotHighlight")
       else
@@ -589,13 +643,13 @@ updateState = (newState) ->
   adminHTML = ""
   if globalState.owner == playerID
     if (playingCount >= 2) and (playingCount <= 5)
-      adminHTML += "<a onclick=\"window.deal('thirteen')\">[Deal Thirteen]</a><br><br>"
+      adminHTML += "<a class=\"button\" onclick=\"window.deal('thirteen')\">Deal Thirteen</a><br>"
     if (playingCount == 3)
-      adminHTML += "<a onclick=\"window.deal('seventeen')\">[Deal Seventeen]</a><br><br>"
+      adminHTML += "<a class=\"button\" onclick=\"window.deal('seventeen')\">Deal Seventeen</a><br>"
     if (playingCount >= 3) and (playingCount <= 5)
-      adminHTML += "<a onclick=\"window.deal('blackout')\">[Deal Blackout]</a><br><br>"
+      adminHTML += "<a class=\"button\" onclick=\"window.deal('blackout')\">Deal Blackout</a><br>"
     if globalState.undo
-      adminHTML += "<a onclick=\"window.undo()\">[Undo Last Throw/Claim]</a><br><br>"
+      adminHTML += "<a class=\"button\" onclick=\"window.undo()\">Undo</a><br>"
   document.getElementById('admin').innerHTML = adminHTML
 
   updatePile()
@@ -612,6 +666,7 @@ init = ->
   window.claimTrick = claimTrick
   window.deal = deal
   window.manipulateHand = manipulateHand
+  window.pass = pass
   window.reconnect = reconnect
   window.renameSelf = renameSelf
   window.renameTable = renameTable
@@ -637,6 +692,12 @@ init = ->
   socket.on 'state', (newState) ->
     console.log "State: ", JSON.stringify(newState)
     updateState(newState)
+  socket.on 'pass', (passInfo) ->
+    console.log "pass: ", JSON.stringify(passInfo)
+    new Audio('chat.mp3').play()
+    spotIndex = getSpotIndex(passInfo.pid)
+    if spotIndex != -1
+      passBubble(spotIndex)
 
   socket.on 'connect', (error) ->
     setConnectionStatus("Connected")
