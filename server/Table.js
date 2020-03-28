@@ -81,7 +81,7 @@
       this.mode = 'thirteen';
       this.pile = [];
       this.pileWho = "";
-      this.undo = null;
+      this.undo = [];
     }
 
     log(text) {
@@ -171,7 +171,7 @@
       switch (template) {
         case 'thirteen':
           this.mode = 'thirteen';
-          this.undo = null;
+          this.undo = [];
           this.pile = [];
           this.pileWho = "";
           if (playingCount > 5) {
@@ -205,7 +205,7 @@
           break;
         case 'seventeen':
           this.mode = 'thirteen';
-          this.undo = null;
+          this.undo = [];
           this.pile = [];
           this.pileWho = "";
           this.deck = new ShuffledDeck([7]); // 2 of hearts
@@ -228,7 +228,7 @@
           break;
         case 'blackout':
           this.mode = 'blackout';
-          this.undo = null;
+          this.undo = [];
           this.pile = [];
           this.pileWho = "";
           if ((playingCount < 3) || (playingCount > 5)) {
@@ -268,7 +268,7 @@
     }
 
     msg(msg) {
-      var card, chat, found, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap;
+      var card, chat, found, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playerName, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap, u;
       switch (msg.type) {
         case 'renamePlayer':
           if ((msg.name != null) && (this.players[msg.pid] != null)) {
@@ -369,13 +369,13 @@
               this.log("ERROR: You may not pick up an incomplete trick.");
               return;
             }
-            this.undo = {
+            this.undo.push({
               type: 'claim',
               pile: this.pile,
               pileWho: player.id,
               pid: player.id,
               tricks: player.tricks
-            };
+            });
             player.tricks += 1;
             this.pile = [];
             this.pileWho = player.id;
@@ -411,13 +411,13 @@
                 return;
               }
             }
-            this.undo = {
+            this.undo.push({
               type: 'throw',
               pileRemove: msg.selected,
               pileWho: this.pileWho,
               pid: player.id,
               hand: player.hand
-            };
+            });
             // build a new hand with the selected cards absent
             newHand = [];
             ref5 = player.hand;
@@ -460,13 +460,14 @@
           }
           break;
         case 'undo':
-          if ((this.players[msg.pid] != null) && (msg.pid === this.owner) && (this.undo !== null)) {
+          if ((this.players[msg.pid] != null) && (msg.pid === this.owner) && (this.undo.length > 0)) {
             // console.log "performing undo: #{JSON.stringify(@undo)}"
-            if (this.undo.pile != null) {
-              this.pile = this.undo.pile;
-            } else if (this.undo.pileRemove != null) {
+            u = this.undo.pop();
+            if (u.pile != null) {
+              this.pile = u.pile;
+            } else if (u.pileRemove != null) {
               removeMap = {};
-              ref8 = this.undo.pileRemove;
+              ref8 = u.pileRemove;
               for (p = 0, len5 = ref8.length; p < len5; p++) {
                 raw = ref8[p];
                 removeMap[raw] = true;
@@ -481,20 +482,21 @@
               }
               this.pile = newPile;
             }
-            if (this.undo.pileWho != null) {
-              this.pileWho = this.undo.pileWho;
+            if (u.pileWho != null) {
+              this.pileWho = u.pileWho;
             }
-            if ((this.undo.pid != null) && (this.players[this.undo.pid] != null)) {
-              player = this.players[this.undo.pid];
-              if (this.undo.hand != null) {
-                player.hand = this.undo.hand;
+            playerName = "Unknown";
+            if ((u.pid != null) && (this.players[u.pid] != null)) {
+              player = this.players[u.pid];
+              playerName = player.name;
+              if (u.hand != null) {
+                player.hand = u.hand;
               }
-              if (this.undo.tricks != null) {
-                player.tricks = this.undo.tricks;
+              if (u.tricks != null) {
+                player.tricks = u.tricks;
               }
             }
-            this.log(`Performing undo of a ${this.undo.type}.`);
-            this.undo = null;
+            this.log(`Performing undo of ${playerName}'s ${u.type}.`);
             this.broadcast();
           }
       }
@@ -525,7 +527,7 @@
         pile: this.pile,
         pileWho: this.pileWho,
         mode: this.mode,
-        undo: this.undo !== null
+        undo: this.undo.length > 0
       };
       ref1 = this.players;
       for (pid in ref1) {

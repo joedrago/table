@@ -516,7 +516,6 @@ updateState = (newState) ->
   if globalState.mode == 'blackout'
     playerHTML += "<th>Tricks</th>"
     playerHTML += "<th><a onclick=\"window.resetBids()\">Bid</a></th>"
-  playerHTML += "<th>Hand</th>"
   playerHTML += "</tr>"
 
   playingCount = 0
@@ -581,14 +580,6 @@ updateState = (newState) ->
       if globalState.owner == playerID
         playerHTML += "<a class=\"adjust\" onclick=\"window.adjustBid('#{player.pid}', 1)\"> &gt;</a>"
       playerHTML += "</td>"
-
-    # Hand
-    handcolor = ""
-    if player.count == 0
-      handcolor = "red"
-    playerHTML += "<td class=\"playerhand#{handcolor}\">"
-    playerHTML += "#{player.count}"
-    playerHTML += "</td>"
 
     playerHTML += "</tr>"
   playerHTML += "</table>"

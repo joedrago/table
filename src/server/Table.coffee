@@ -49,7 +49,7 @@ class Table
     @mode = 'thirteen'
     @pile = []
     @pileWho = ""
-    @undo = null
+    @undo = []
 
   log: (text) ->
     for pid, player of @players
@@ -108,7 +108,7 @@ class Table
 
       when 'thirteen'
         @mode = 'thirteen'
-        @undo = null
+        @undo = []
         @pile = []
         @pileWho = ""
         if playingCount > 5
@@ -135,7 +135,7 @@ class Table
 
       when 'seventeen'
         @mode = 'thirteen'
-        @undo = null
+        @undo = []
         @pile = []
         @pileWho = ""
         @deck = new ShuffledDeck([7]) # 2 of hearts
@@ -153,7 +153,7 @@ class Table
 
       when 'blackout'
         @mode = 'blackout'
-        @undo = null
+        @undo = []
         @pile = []
         @pileWho = ""
         if (playingCount < 3) or (playingCount > 5)
@@ -263,12 +263,13 @@ class Table
             @log "ERROR: You may not pick up an incomplete trick."
             return
 
-          @undo =
+          @undo.push {
             type: 'claim'
             pile: @pile
             pileWho: player.id
             pid: player.id
             tricks: player.tricks
+          }
 
           player.tricks += 1
 
@@ -298,12 +299,13 @@ class Table
               @log "ERROR: You can't throw what you dont have."
               return
 
-          @undo =
+          @undo.push {
             type: 'throw'
             pileRemove: msg.selected
             pileWho: @pileWho
             pid: player.id
             hand: player.hand
+          }
 
           # build a new hand with the selected cards absent
           newHand = []
@@ -337,30 +339,32 @@ class Table
           @broadcast()
 
       when 'undo'
-        if @players[msg.pid]? and (msg.pid == @owner) and (@undo != null)
+        if @players[msg.pid]? and (msg.pid == @owner) and (@undo.length > 0)
           # console.log "performing undo: #{JSON.stringify(@undo)}"
-          if @undo.pile?
-            @pile = @undo.pile
-          else if @undo.pileRemove?
+          u = @undo.pop()
+          if u.pile?
+            @pile = u.pile
+          else if u.pileRemove?
             removeMap = {}
-            for raw in @undo.pileRemove
+            for raw in u.pileRemove
               removeMap[raw] = true
             newPile = []
             for card in @pile
               if not removeMap[card.raw]
                 newPile.push card
             @pile = newPile
-          if @undo.pileWho?
-            @pileWho = @undo.pileWho
-          if @undo.pid? and @players[@undo.pid]?
-            player = @players[@undo.pid]
-            if @undo.hand?
-              player.hand = @undo.hand
-            if @undo.tricks?
-              player.tricks = @undo.tricks
+          if u.pileWho?
+            @pileWho = u.pileWho
+          playerName = "Unknown"
+          if u.pid? and @players[u.pid]?
+            player = @players[u.pid]
+            playerName = player.name
+            if u.hand?
+              player.hand = u.hand
+            if u.tricks?
+              player.tricks = u.tricks
 
-          @log "Performing undo of a #{@undo.type}."
-          @undo = null
+          @log "Performing undo of #{playerName}'s #{u.type}."
           @broadcast()
 
     return
@@ -386,7 +390,7 @@ class Table
       pile: @pile
       pileWho: @pileWho
       mode: @mode
-      undo: (@undo != null)
+      undo: (@undo.length > 0)
 
     for pid, player of @players
       if player.socket != null
