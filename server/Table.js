@@ -200,8 +200,8 @@
         player = ref[pid];
         h = player.hand.slice(0).sort(function(a, b) {
           var aRank, aSuit, bRank, bSuit;
-          [aRank, aSuit] = thirteenSortRankSuit(a.raw);
-          [bRank, bSuit] = thirteenSortRankSuit(b.raw);
+          [aRank, aSuit] = thirteenSortRankSuit(a);
+          [bRank, bSuit] = thirteenSortRankSuit(b);
           if (aRank === bRank) {
             return aSuit - bSuit;
           }

@@ -125,8 +125,8 @@ class Table
     lowestName = "Unknown"
     for pid, player of @players
       h = player.hand.slice(0).sort (a,b) ->
-        [aRank, aSuit] = thirteenSortRankSuit(a.raw)
-        [bRank, bSuit] = thirteenSortRankSuit(b.raw)
+        [aRank, aSuit] = thirteenSortRankSuit(a)
+        [bRank, bSuit] = thirteenSortRankSuit(b)
         if aRank == bRank
           return (aSuit - bSuit)
         return (aRank - bRank)
