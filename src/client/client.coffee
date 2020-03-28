@@ -268,7 +268,7 @@ redrawHand = ->
   if (globalState.mode == 'blackout') and (pile.length == playingCount)
     showClaim = true
 
-  if globalState.mode == 'thirteen'
+  if (globalState.mode == 'thirteen') and (globalState.turn == playerID)
     throwR += """
       <a class=\"button\" onclick="window.pass()">Pass     </a>
     """
@@ -557,7 +557,7 @@ updateSpots = ->
       spotElement = document.getElementById("spot#{spotIndex}")
       spotElement.innerHTML = spotHTML
       spotElement.classList.add("spotActive")
-      if player.pid == globalState.pileWho
+      if player.pid == globalState.turn
         spotElement.classList.add("spotHighlight")
       else
         spotElement.classList.remove("spotHighlight")
@@ -657,7 +657,7 @@ updateState = (newState) ->
     if (playingCount >= 3) and (playingCount <= 5)
       adminHTML += "<a class=\"button\" onclick=\"window.deal('blackout')\">Deal Blackout</a><br>"
     if globalState.undo
-      adminHTML += "<a class=\"button\" onclick=\"window.undo()\">Undo</a><br>"
+      adminHTML += "<br><a class=\"button\" onclick=\"window.undo()\">Undo</a><br>"
   document.getElementById('admin').innerHTML = adminHTML
 
   updatePile()
@@ -734,6 +734,8 @@ init = ->
       logdiv.scrollTop = logdiv.scrollHeight
       if chat.text.match(/throws:/)
         new Audio('throw.mp3').play()
+      if chat.text.match(/wins!$/)
+        new Audio('win.mp3').play()
 
 
   # All done!

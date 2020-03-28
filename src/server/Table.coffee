@@ -16,12 +16,31 @@ class ShuffledDeck
       @cards.push(@cards[j])
       @cards[j] = i
 
-thirteenSortRankSuit = (raw) ->
-  rank = Math.floor(raw / 4)
-  if rank < 2 # Ace or 2
-    rank += 13
-  suit = Math.floor(raw % 4)
-  return [rank, suit]
+thirteenRank = (originalHand) ->
+  hand = []
+  for raw in originalHand
+    rank = Math.floor(raw / 4)
+    if rank < 2 # Ace or 2
+      rank += 13
+    suit = Math.floor(raw % 4)
+    # hand.push((suit * 4) + rank)
+    hand.push(suit + (rank * 13)) # rank more important than suit
+  hand.sort (a,b) ->
+    return a - b
+  return hand
+
+blackoutRank = (originalHand) ->
+  hand = []
+  for raw in originalHand
+    rank = Math.floor(raw / 4)
+    if rank == 0 # Ace
+      rank += 13
+    reorderSuit = [3, 0, 2, 1]
+    suit = reorderSuit[Math.floor(raw % 4)]
+    hand.push((suit * 4) + rank) # suit more important than rank
+  hand.sort (a,b) ->
+    return a - b
+  return hand
 
 escapeHtml = (t) ->
     return t
@@ -31,7 +50,7 @@ escapeHtml = (t) ->
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;")
 
-prettyCardList = (rawList) ->
+prettyCardList = (rawList, useColors = true) ->
   text = ""
   for raw in rawList
     if text.length > 0
@@ -54,7 +73,10 @@ prettyCardList = (rawList) ->
       when 1 then 'cb'
       when 2 then 'cr'
       when 3 then 'cr'
-    text += "<span class=\"#{cssClass}\">#{rankText}#{suitText}</span>"
+    if useColors
+      text += "<span class=\"#{cssClass}\">#{rankText}#{suitText}</span>"
+    else
+      text += "#{rankText}#{suitText}"
   return text
 
 class Table
@@ -68,6 +90,7 @@ class Table
     @mode = 'thirteen'
     @pile = []
     @pileWho = ""
+    @turn = ""
     @undo = []
 
   log: (text) ->
@@ -120,20 +143,19 @@ class Table
         playingCount += 1
     return playingCount
 
-  whoShouldGoFirst: ->
+  whoShouldGoFirst: (rankFunc) ->
     lowestCard = null
-    lowestName = "Unknown"
+    firstPlayer = null
     for pid, player of @players
-      h = player.hand.slice(0).sort (a,b) ->
-        [aRank, aSuit] = thirteenSortRankSuit(a)
-        [bRank, bSuit] = thirteenSortRankSuit(b)
-        if aRank == bRank
-          return (aSuit - bSuit)
-        return (aRank - bRank)
+      if !player.playing or (player.socket == null)
+        continue
+      h = rankFunc(player.hand)
+      # console.log "#{player.name} has #{JSON.stringify(h)}"
       if (lowestCard == null) or (lowestCard > h[0])
         lowestCard = h[0]
-        lowestName = player.name
-    return lowestName
+        firstPlayer = player
+    console.log "first player: #{firstPlayer.name}\n"
+    return firstPlayer
 
   deal: (template) ->
     playingCount = @countPlaying()
@@ -145,6 +167,8 @@ class Table
         @undo = []
         @pile = []
         @pileWho = ""
+        @turn = ""
+        @lastZeroCardPlayerCount = 0
         if playingCount > 5
           @log "ERROR: Too many players (#{playingCount}) to deal 13 to everyone."
           return
@@ -161,11 +185,12 @@ class Table
             for j in [0...cardsToDeal]
               player.hand.push @deck.cards.shift()
 
-        firstPlayer = @whoShouldGoFirst()
+        firstPlayer = @whoShouldGoFirst(thirteenRank)
+        @turn = firstPlayer.id
         if fivePlayer
-          @log "Removed the red 2s and dealt 10 to everyone. <span class=\"logname\">#{escapeHtml(firstPlayer)}</span> should go first."
+          @log "Thirteen: Removed red 2s; dealt 10. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
         else
-          @log "Dealt 13 to everyone. <span class=\"logname\">#{escapeHtml(firstPlayer)}</span> should go first."
+          @log "Thirteen: Dealt 13 to everyone. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
         @broadcast()
 
       when 'seventeen'
@@ -173,6 +198,7 @@ class Table
         @undo = []
         @pile = []
         @pileWho = ""
+        @lastZeroCardPlayerCount = 0
         @deck = new ShuffledDeck([7]) # 2 of hearts
         if playingCount != 3
           @log "ERROR: You can only deal 17 to 3 players."
@@ -183,8 +209,9 @@ class Table
             for j in [0...17]
               player.hand.push @deck.cards.shift()
 
-        firstPlayer = @whoShouldGoFirst()
-        @log "Removed the 2 of hearts and dealt 17 to everyone. <span class=\"logname\">#{escapeHtml(firstPlayer)}</span> should go first."
+        firstPlayer = @whoShouldGoFirst(thirteenRank)
+        @turn = firstPlayer.id
+        @log "Thirteen: Removed 2H; dealt 17. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
         @broadcast()
 
       when 'blackout'
@@ -192,6 +219,8 @@ class Table
         @undo = []
         @pile = []
         @pileWho = ""
+        @turn = ""
+        @lastZeroCardPlayerCount = 0
         if (playingCount < 3) or (playingCount > 5)
           @log "ERROR: Blackout is a 3-5 player game."
           return
@@ -210,10 +239,12 @@ class Table
             for j in [0...cardsToDeal]
               player.hand.push @deck.cards.shift()
 
+        firstPlayer = @whoShouldGoFirst(blackoutRank)
+        @turn = firstPlayer.id
         if fivePlayer
-          @log "Removed the red 2s and dealt 10 to everyone. (blackout)"
+          @log "Blackout: Removed red 2s; dealt 10. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
         else
-          @log "Dealt 13 to everyone. (blackout)"
+          @log "Blackout: Dealt 13. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
         @broadcast()
 
       else
@@ -221,7 +252,23 @@ class Table
 
     return
 
+  playerAfter: (currentPlayer) ->
+    pids = []
+    for pid, player of @players
+      if player.playing and (player.socket != null)
+        pids.push player.id
 
+    currentIndex = -1
+    for pid, playerIndex in pids
+      if currentPlayer.id == pid
+        currentIndex = playerIndex
+        break
+    nextIndex = (currentIndex + 1) % pids.length
+    while @players[pids[nextIndex]].id != currentPlayer.id
+      if @players[pids[nextIndex]].hand.length > 0
+        return pids[nextIndex]
+      nextIndex = (currentIndex + 1) % pids.length
+    return ""
 
   msg: (msg) ->
     switch msg.type
@@ -305,12 +352,16 @@ class Table
             pileWho: player.id
             pid: player.id
             tricks: player.tricks
+            turn: @turn
           }
 
           player.tricks += 1
 
           @pile = []
           @pileWho = player.id
+          @turn = player.id # the person that claims the trick must go next
+          if player.hand.length == 0
+            @turn = ""
           @log "<span class=\"logname\">#{escapeHtml(player.name)}</span> claims the trick."
           @broadcast()
 
@@ -341,6 +392,7 @@ class Table
             pileWho: @pileWho
             pid: player.id
             hand: player.hand
+            turn: @turn
           }
 
           # build a new hand with the selected cards absent
@@ -357,7 +409,7 @@ class Table
           # Add to the pile
           if @mode == 'thirteen'
             pileX = Math.floor(Math.random() * 100)
-            pileY = Math.floor(Math.random() * 80)
+            pileY = Math.floor(Math.random() * 70)
           else
             # Blackout
             pileX = 10 + (@pile.length * 50)
@@ -370,18 +422,42 @@ class Table
               y: pileY
             }
 
+          # find next player (returns "" if there is not another turn)
+          @turn = @playerAfter(player)
+          playingCount = @countPlaying()
+          # console.log "@mode #{@mode} pile #{@pile.length} playingCount #{playingCount}"
+          if (@mode == 'blackout') and (@pile.length == playingCount)
+            # someone has to claim the trick
+            @turn = ""
+
+          zeroCardPlayerCount = 0
+          for pid, player of @players
+            if player.playing and (player.socket != null) and (player.hand.length == 0)
+              zeroCardPlayerCount += 1
+
           @log "<span class=\"logname\">#{escapeHtml(player.name)}</span> throws: #{prettyCardList(msg.selected)}"
+          if (@mode == 'thirteen') and (zeroCardPlayerCount == 1) and (@lastZeroCardPlayerCount != zeroCardPlayerCount)
+            @lastZeroCardPlayerCount = zeroCardPlayerCount
+            @log "<span class=\"logname\">#{escapeHtml(player.name)}</span> wins!"
           @pileWho = player.id
           @broadcast()
 
       when 'pass'
-        if @players[msg.pid]? and @players[msg.pid].playing
+        if @players[msg.pid]? and @players[msg.pid].playing and (msg.pid == @turn)
+          @undo.push {
+            type: 'pass'
+            pid: msg.pid
+            turn: @turn
+          }
+
+          @turn = @playerAfter(@players[msg.pid])
           @log "<span class=\"logname\">#{escapeHtml(@players[msg.pid].name)}</span> passes."
           for pid, player of @players
             if player.socket != null
               player.socket.emit 'pass', {
                 pid: msg.pid
               }
+          @broadcast()
 
       when 'undo'
         if @players[msg.pid]? and (msg.pid == @owner) and (@undo.length > 0)
@@ -400,6 +476,8 @@ class Table
             @pile = newPile
           if u.pileWho?
             @pileWho = u.pileWho
+          if u.turn?
+            @turn = u.turn
           playerName = "Unknown"
           if u.pid? and @players[u.pid]?
             player = @players[u.pid]
@@ -435,6 +513,7 @@ class Table
       pile: @pile
       pileWho: @pileWho
       mode: @mode
+      turn: @turn
       undo: (@undo.length > 0)
 
     for pid, player of @players
