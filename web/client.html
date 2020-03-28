@@ -114,6 +114,11 @@
 
         background-color: #333;
         color: #fff;
+
+        user-select: text;
+        white-space: pre;
+        overflow-x: none;
+        overflow-y: auto;
     }
 
     #chat {
@@ -126,6 +131,28 @@
         font-family: monospace;
         border: 1px solid #555;
         background-color: #333;
+        color: #fff;
+    }
+
+    .logline {
+    }
+    .logname {
+        color: #ffa;
+    }
+    .logchat {
+        color: #aff;
+    }
+    .loginfo {
+        color: #aaa;
+        font-style: italic;
+    }
+
+    .cr {
+        font-style: normal;
+        color: #f22;
+    }
+    .cb {
+        font-style: normal;
         color: #fff;
     }
 
@@ -386,7 +413,7 @@
 </div>
 
 <div id="bottomleft">
-    <textarea id="log" readonly></textarea>
+    <div id="log" readonly></div>
     <input type="text" value="" autocomplete="off" placeholder="Chat here..." id="chat"></input>
 </div>
 

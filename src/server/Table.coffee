@@ -16,6 +16,14 @@ class ShuffledDeck
       @cards.push(@cards[j])
       @cards[j] = i
 
+escapeHtml = (t) ->
+    return t
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;")
+
 prettyCardList = (rawList) ->
   text = ""
   for raw in rawList
@@ -34,7 +42,12 @@ prettyCardList = (rawList) ->
       when 1 then 'C'
       when 2 then 'D'
       when 3 then 'H'
-    text += "#{rankText}#{suitText}"
+    cssClass = switch suit
+      when 0 then 'cb'
+      when 1 then 'cb'
+      when 2 then 'cr'
+      when 3 then 'cr'
+    text += "<span class=\"#{cssClass}\">#{rankText}#{suitText}</span>"
   return text
 
 
@@ -191,13 +204,13 @@ class Table
     switch msg.type
       when 'renamePlayer'
         if msg.name? and @players[msg.pid]?
-          @log "'#{@players[msg.pid].name}' is now '#{msg.name}'."
+          @log "'<span class=\"logname\">#{escapeHtml(@players[msg.pid].name)}</span>' is now '<span class=\"logname\">#{escapeHtml(msg.name)}</span>'."
           @players[msg.pid].name = msg.name
           @broadcast()
 
       when 'renameTable'
         if @players[msg.pid]? and (msg.pid == @owner) and msg.name?
-          @log "The table is now named '#{msg.name}'."
+          @log "The table is now named '#{escapeHtml(msg.name)}'."
           @name = msg.name
           @broadcast()
 
@@ -275,7 +288,7 @@ class Table
 
           @pile = []
           @pileWho = player.id
-          @log "#{player.name} claims the trick."
+          @log "<span class=\"logname\">#{escapeHtml(player.name)}</span> claims the trick."
           @broadcast()
 
       when 'throwSelected'
@@ -334,13 +347,13 @@ class Table
               y: pileY
             }
 
-          @log "#{player.name} throws: #{prettyCardList(msg.selected)}"
+          @log "<span class=\"logname\">#{escapeHtml(player.name)}</span> throws: #{prettyCardList(msg.selected)}"
           @pileWho = player.id
           @broadcast()
 
       when 'pass'
         if @players[msg.pid]? and @players[msg.pid].playing
-          @log "#{@players[msg.pid].name} passes."
+          @log "<span class=\"logname\">#{escapeHtml(@players[msg.pid].name)}</span> passes."
           for pid, player of @players
             if player.socket != null
               player.socket.emit 'pass', {
@@ -373,7 +386,7 @@ class Table
             if u.tricks?
               player.tricks = u.tricks
 
-          @log "Performing undo of #{playerName}'s #{u.type}."
+          @log "Performing undo of <span class=\"logname\">#{escapeHtml(playerName)}</span>'s #{u.type}."
           @broadcast()
 
     return

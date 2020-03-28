@@ -13,6 +13,14 @@ CARD_IMAGE_H = 158
 CARD_IMAGE_ADV_X = CARD_IMAGE_W
 CARD_IMAGE_ADV_Y = CARD_IMAGE_H
 
+escapeHtml = (t) ->
+    return t
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;")
+
 passBubbleTimeouts = new Array(6).fill(null)
 passBubble = (spotIndex) ->
   el = document.getElementById("spotpass#{spotIndex}")
@@ -712,13 +720,17 @@ init = ->
       for player in globalState.players
         if player.pid == chat.pid
           logdiv = document.getElementById("log")
-          logdiv.value += "<#{player.name}> #{chat.text}\n"
+          logdiv.innerHTML += """
+            <div class="logline">&lt;<span class="logname">#{escapeHtml(player.name)}</span>&gt; <span class="logchat">#{escapeHtml(chat.text)}</span></div>
+          """
           logdiv.scrollTop = logdiv.scrollHeight
           new Audio('chat.mp3').play()
           break
     else
       logdiv = document.getElementById("log")
-      logdiv.value += "*** #{chat.text}\n"
+      logdiv.innerHTML += """
+        <div class="logline"><span class="loginfo">*** #{chat.text}</span></div>
+      """
       logdiv.scrollTop = logdiv.scrollHeight
       if chat.text.match(/throws:/)
         new Audio('throw.mp3').play()
