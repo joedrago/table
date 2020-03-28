@@ -359,7 +359,7 @@
     }
 
     playerAfter(currentPlayer) {
-      var currentIndex, k, len, nextIndex, pid, pids, player, playerIndex, ref;
+      var currentIndex, k, len, loopIndex, nextIndex, pid, pids, player, playerIndex, ref;
       pids = [];
       ref = this.players;
       for (pid in ref) {
@@ -376,12 +376,16 @@
           break;
         }
       }
+      if (currentIndex === -1) {
+        return "";
+      }
+      loopIndex = currentIndex;
       nextIndex = (currentIndex + 1) % pids.length;
-      while (this.players[pids[nextIndex]].id !== currentPlayer.id) {
+      while (nextIndex !== loopIndex) {
         if (this.players[pids[nextIndex]].hand.length > 0) {
           return pids[nextIndex];
         }
-        nextIndex = (currentIndex + 1) % pids.length;
+        nextIndex = (nextIndex + 1) % pids.length;
       }
       return "";
     }

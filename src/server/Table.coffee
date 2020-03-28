@@ -263,11 +263,15 @@ class Table
       if currentPlayer.id == pid
         currentIndex = playerIndex
         break
+    if currentIndex == -1
+      return ""
+
+    loopIndex = currentIndex
     nextIndex = (currentIndex + 1) % pids.length
-    while @players[pids[nextIndex]].id != currentPlayer.id
+    while nextIndex != loopIndex
       if @players[pids[nextIndex]].hand.length > 0
         return pids[nextIndex]
-      nextIndex = (currentIndex + 1) % pids.length
+      nextIndex = (nextIndex + 1) % pids.length
     return ""
 
   msg: (msg) ->
