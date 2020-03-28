@@ -16,6 +16,13 @@ class ShuffledDeck
       @cards.push(@cards[j])
       @cards[j] = i
 
+thirteenSortRankSuit = (raw) ->
+  rank = Math.floor(raw / 4)
+  if rank < 2 # Ace or 2
+    rank += 13
+  suit = Math.floor(raw % 4)
+  return [rank, suit]
+
 escapeHtml = (t) ->
     return t
       .replace(/&/g, "&amp;")
@@ -49,7 +56,6 @@ prettyCardList = (rawList) ->
       when 3 then 'cr'
     text += "<span class=\"#{cssClass}\">#{rankText}#{suitText}</span>"
   return text
-
 
 class Table
   constructor: (@id) ->
@@ -114,6 +120,21 @@ class Table
         playingCount += 1
     return playingCount
 
+  whoShouldGoFirst: ->
+    lowestCard = null
+    lowestName = "Unknown"
+    for pid, player of @players
+      h = player.hand.slice(0).sort (a,b) ->
+        [aRank, aSuit] = thirteenSortRankSuit(a.raw)
+        [bRank, bSuit] = thirteenSortRankSuit(b.raw)
+        if aRank == bRank
+          return (aSuit - bSuit)
+        return (aRank - bRank)
+      if (lowestCard == null) or (lowestCard > h[0])
+        lowestCard = h[0]
+        lowestName = player.name
+    return lowestName
+
   deal: (template) ->
     playingCount = @countPlaying()
 
@@ -140,10 +161,11 @@ class Table
             for j in [0...cardsToDeal]
               player.hand.push @deck.cards.shift()
 
+        firstPlayer = @whoShouldGoFirst()
         if fivePlayer
-          @log "Removed the red 2s and dealt 10 to everyone. (thirteen)"
+          @log "Removed the red 2s and dealt 10 to everyone. <span class=\"logname\">#{escapeHtml(firstPlayer)}</span> should go first."
         else
-          @log "Dealt 13 to everyone. (thirteen)"
+          @log "Dealt 13 to everyone. <span class=\"logname\">#{escapeHtml(firstPlayer)}</span> should go first."
         @broadcast()
 
       when 'seventeen'
@@ -161,7 +183,8 @@ class Table
             for j in [0...17]
               player.hand.push @deck.cards.shift()
 
-        @log "Removed the 2 of hearts and dealt 17 to everyone. (thirteen)"
+        firstPlayer = @whoShouldGoFirst()
+        @log "Removed the 2 of hearts and dealt 17 to everyone. <span class=\"logname\">#{escapeHtml(firstPlayer)}</span> should go first."
         @broadcast()
 
       when 'blackout'
