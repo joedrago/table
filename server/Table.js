@@ -395,7 +395,7 @@
     }
 
     msg(msg) {
-      var card, chat, found, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playerName, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap, u, zeroCardPlayerCount;
+      var card, chat, found, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playerName, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap, u, zeroCardPlayer, zeroCardPlayerCount;
       switch (msg.type) {
         case 'renamePlayer':
           if ((this.players[msg.pid] != null) && (msg.name != null)) {
@@ -604,8 +604,8 @@
             zeroCardPlayerCount = 0;
             ref8 = this.players;
             for (pid in ref8) {
-              player = ref8[pid];
-              if (player.playing && (player.socket !== null) && (player.hand.length === 0)) {
+              zeroCardPlayer = ref8[pid];
+              if (zeroCardPlayer.playing && (zeroCardPlayer.socket !== null) && (zeroCardPlayer.hand.length === 0)) {
                 zeroCardPlayerCount += 1;
               }
             }

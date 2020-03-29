@@ -443,8 +443,8 @@ class Table
             @turn = ""
 
           zeroCardPlayerCount = 0
-          for pid, player of @players
-            if player.playing and (player.socket != null) and (player.hand.length == 0)
+          for pid, zeroCardPlayer of @players
+            if zeroCardPlayer.playing and (zeroCardPlayer.socket != null) and (zeroCardPlayer.hand.length == 0)
               zeroCardPlayerCount += 1
 
           @log "<span class=\"logname\">#{escapeHtml(player.name)}</span> throws: #{prettyCardList(msg.selected)}"
