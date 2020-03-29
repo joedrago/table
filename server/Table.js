@@ -619,7 +619,9 @@
           }
           break;
         case 'pass':
-          if ((this.players[msg.pid] != null) && this.players[msg.pid].playing) { // and (msg.pid == @turn)
+          console.log(`incoming pass request: ${JSON.stringify(msg)}`);
+          if ((this.players[msg.pid] != null) && this.players[msg.pid].playing && (msg.pid === this.turn)) {
+            console.log(`executing pass: ${JSON.stringify(msg)}`);
             this.undo.push({
               type: 'pass',
               pid: msg.pid,

@@ -455,7 +455,9 @@ class Table
           @broadcast()
 
       when 'pass'
-        if @players[msg.pid]? and @players[msg.pid].playing # and (msg.pid == @turn)
+        console.log "incoming pass request: #{JSON.stringify(msg)}"
+        if @players[msg.pid]? and @players[msg.pid].playing and (msg.pid == @turn)
+          console.log "executing pass: #{JSON.stringify(msg)}"
           @undo.push {
             type: 'pass'
             pid: msg.pid
