@@ -619,7 +619,7 @@
           }
           break;
         case 'pass':
-          if ((this.players[msg.pid] != null) && this.players[msg.pid].playing && (msg.pid === this.turn)) {
+          if ((this.players[msg.pid] != null) && this.players[msg.pid].playing) { // and (msg.pid == @turn)
             this.undo.push({
               type: 'pass',
               pid: msg.pid,

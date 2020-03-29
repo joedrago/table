@@ -455,7 +455,7 @@ class Table
           @broadcast()
 
       when 'pass'
-        if @players[msg.pid]? and @players[msg.pid].playing and (msg.pid == @turn)
+        if @players[msg.pid]? and @players[msg.pid].playing # and (msg.pid == @turn)
           @undo.push {
             type: 'pass'
             pid: msg.pid
