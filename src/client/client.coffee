@@ -134,6 +134,17 @@ changeOwner = (owner) ->
     owner: owner
   }
 
+changeDealer = (dealer) ->
+  if mustBeOwner()
+    return
+
+  socket.emit 'table', {
+    pid: playerID
+    tid: tableID
+    type: 'changeDealer'
+    dealer: dealer
+  }
+
 adjustScore = (pid, adjustment) ->
   if mustBeOwner()
     return
@@ -271,9 +282,14 @@ redrawHand = ->
     showClaim = true
 
   if (globalState.mode == 'thirteen') and (globalState.turn == playerID)
-    throwR += """
-      <a class=\"button\" onclick="window.pass()">Pass     </a>
-    """
+    if foundSelected
+      throwR += """
+        (Deselect cards to pass)
+      """
+    else
+      throwR += """
+        <a class=\"button\" onclick="window.pass()">Pass     </a>
+      """
 
   if showThrow
     throwL += """
@@ -614,6 +630,7 @@ updateState = (newState) ->
   if globalState.mode == 'blackout'
     playerHTML += "<th>Tricks</th>"
     playerHTML += "<th><a onclick=\"window.resetBids()\">Bid</a></th>"
+    playerHTML += "<th>&nbsp;</th>" # Dealer Button
   playerHTML += "</tr>"
 
   playingCount = 0
@@ -678,6 +695,17 @@ updateState = (newState) ->
         playerHTML += "<a class=\"adjust\" onclick=\"window.adjustBid('#{player.pid}', 1)\"> &gt;</a>"
       playerHTML += "</td>"
 
+    # Dealer button
+    if globalState.mode == 'blackout'
+      playerHTML += "<td class=\"playerdealer\">"
+      if player.pid == globalState.dealer
+        playerHTML += "&#x1F3B4;"
+      else if globalState.owner == playerID
+        playerHTML += "<a onclick=\"window.changeDealer('#{player.pid}')\">&#x1F537;</a>"
+      else
+        playerHTML += "&nbsp;"
+      playerHTML += "</td>"
+
     playerHTML += "</tr>"
   playerHTML += "</table>"
   document.getElementById('players').innerHTML = playerHTML
@@ -715,6 +743,7 @@ setConnectionStatus = (status, color = '#ffffff') ->
 init = ->
   window.adjustBid = adjustBid
   window.adjustScore = adjustScore
+  window.changeDealer = changeDealer
   window.changeOwner = changeOwner
   window.chooseAvatar = chooseAvatar
   window.claimTrick = claimTrick

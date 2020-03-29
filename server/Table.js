@@ -140,6 +140,7 @@
       this.pile = [];
       this.pileWho = "";
       this.turn = "";
+      this.dealer = "";
       this.undo = [];
     }
 
@@ -294,7 +295,7 @@
           this.pile = [];
           this.pileWho = "";
           this.lastZeroCardPlayerCount = 0;
-          this.deck = new ShuffledDeck([7]); // 2 of hearts
+          this.deck = new ShuffledDeck([9]); // 3 of clubs
           if (playingCount !== 3) {
             this.log("ERROR: You can only deal 17 to 3 players.");
             return;
@@ -311,7 +312,7 @@
           }
           firstPlayer = this.whoShouldGoFirst(thirteenRank);
           this.turn = firstPlayer.id;
-          this.log(`Thirteen: Removed 2H; dealt 17. <span class=\"logname\">${escapeHtml(firstPlayer.name)}</span> should go first.`);
+          this.log(`Thirteen: Removed 3C; dealt 17. <span class=\"logname\">${escapeHtml(firstPlayer.name)}</span> should go first.`);
           this.broadcast();
           break;
         case 'blackout':
@@ -422,6 +423,15 @@
             if ((this.players[msg.owner] != null) && (this.players[msg.owner].socket !== null)) {
               this.owner = msg.owner;
             }
+            this.broadcast();
+          }
+          break;
+        case 'changeDealer':
+          if ((this.players[msg.pid] != null) && (msg.pid === this.owner) && (msg.dealer != null)) {
+            if ((this.players[msg.dealer] != null) && (this.players[msg.dealer].socket !== null)) {
+              this.dealer = msg.dealer;
+            }
+            this.log(`'<span class=\"logname\">${escapeHtml(this.players[msg.dealer].name)}</span>' is now the dealer.`);
             this.broadcast();
           }
           break;
@@ -619,9 +629,9 @@
           }
           break;
         case 'pass':
-          console.log(`incoming pass request: ${JSON.stringify(msg)}`);
+          // console.log "incoming pass request: #{JSON.stringify(msg)}"
           if ((this.players[msg.pid] != null) && this.players[msg.pid].playing && (msg.pid === this.turn)) {
-            console.log(`executing pass: ${JSON.stringify(msg)}`);
+            // console.log "executing pass: #{JSON.stringify(msg)}"
             this.undo.push({
               type: 'pass',
               pid: msg.pid,
@@ -714,6 +724,7 @@
         pileWho: this.pileWho,
         mode: this.mode,
         turn: this.turn,
+        dealer: this.dealer,
         undo: this.undo.length > 0
       };
       ref1 = this.players;

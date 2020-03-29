@@ -91,6 +91,7 @@ class Table
     @pile = []
     @pileWho = ""
     @turn = ""
+    @dealer = ""
     @undo = []
 
   log: (text) ->
@@ -200,7 +201,7 @@ class Table
         @pile = []
         @pileWho = ""
         @lastZeroCardPlayerCount = 0
-        @deck = new ShuffledDeck([7]) # 2 of hearts
+        @deck = new ShuffledDeck([9]) # 3 of clubs
         if playingCount != 3
           @log "ERROR: You can only deal 17 to 3 players."
           return
@@ -212,7 +213,7 @@ class Table
 
         firstPlayer = @whoShouldGoFirst(thirteenRank)
         @turn = firstPlayer.id
-        @log "Thirteen: Removed 2H; dealt 17. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
+        @log "Thirteen: Removed 3C; dealt 17. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
         @broadcast()
 
       when 'blackout'
@@ -300,6 +301,13 @@ class Table
         if @players[msg.pid]? and (msg.pid == @owner) and msg.owner?
           if @players[msg.owner]? and (@players[msg.owner].socket != null)
             @owner = msg.owner
+          @broadcast()
+
+      when 'changeDealer'
+        if @players[msg.pid]? and (msg.pid == @owner) and msg.dealer?
+          if @players[msg.dealer]? and (@players[msg.dealer].socket != null)
+            @dealer = msg.dealer
+          @log "'<span class=\"logname\">#{escapeHtml(@players[msg.dealer].name)}</span>' is now the dealer."
           @broadcast()
 
       when 'setScore'
@@ -455,9 +463,9 @@ class Table
           @broadcast()
 
       when 'pass'
-        console.log "incoming pass request: #{JSON.stringify(msg)}"
+        # console.log "incoming pass request: #{JSON.stringify(msg)}"
         if @players[msg.pid]? and @players[msg.pid].playing and (msg.pid == @turn)
-          console.log "executing pass: #{JSON.stringify(msg)}"
+          # console.log "executing pass: #{JSON.stringify(msg)}"
           @undo.push {
             type: 'pass'
             pid: msg.pid
@@ -529,6 +537,7 @@ class Table
       pileWho: @pileWho
       mode: @mode
       turn: @turn
+      dealer: @dealer
       undo: (@undo.length > 0)
 
     for pid, player of @players
