@@ -387,6 +387,9 @@
         }
         nextIndex = (nextIndex + 1) % pids.length;
       }
+      if (currentPlayer.hand.length > 0) {
+        return currentPlayer.id;
+      }
       return "";
     }
 

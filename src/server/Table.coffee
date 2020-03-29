@@ -272,6 +272,8 @@ class Table
       if @players[pids[nextIndex]].hand.length > 0
         return pids[nextIndex]
       nextIndex = (nextIndex + 1) % pids.length
+    if currentPlayer.hand.length > 0
+      return currentPlayer.id
     return ""
 
   msg: (msg) ->
