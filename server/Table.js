@@ -178,6 +178,7 @@
           id: pid,
           socket: null,
           name: this.anonymousName(),
+          avatar: '1f603', // happy face
           score: 0,
           bid: 0,
           tricks: 0,
@@ -397,7 +398,7 @@
       var card, chat, found, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playerName, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap, u, zeroCardPlayerCount;
       switch (msg.type) {
         case 'renamePlayer':
-          if ((msg.name != null) && (this.players[msg.pid] != null)) {
+          if ((this.players[msg.pid] != null) && (msg.name != null)) {
             this.log(`'<span class=\"logname\">${escapeHtml(this.players[msg.pid].name)}</span>' is now '<span class=\"logname\">${escapeHtml(msg.name)}</span>'.`);
             this.players[msg.pid].name = msg.name;
             this.broadcast();
@@ -407,6 +408,12 @@
           if ((this.players[msg.pid] != null) && (msg.pid === this.owner) && (msg.name != null)) {
             this.log(`The table is now named '${escapeHtml(msg.name)}'.`);
             this.name = msg.name;
+            this.broadcast();
+          }
+          break;
+        case 'chooseAvatar':
+          if ((this.players[msg.pid] != null) && (msg.avatar != null)) {
+            this.players[msg.pid].avatar = msg.avatar;
             this.broadcast();
           }
           break;
@@ -688,6 +695,7 @@
           players.push({
             pid: pid,
             name: player.name,
+            avatar: player.avatar,
             score: player.score,
             bid: player.bid,
             tricks: player.tricks,

@@ -114,6 +114,7 @@ class Table
         socket: null
 
         name: @anonymousName()
+        avatar: '1f603' # happy face
         score: 0
         bid: 0
         tricks: 0
@@ -279,7 +280,7 @@ class Table
   msg: (msg) ->
     switch msg.type
       when 'renamePlayer'
-        if msg.name? and @players[msg.pid]?
+        if @players[msg.pid]? and msg.name?
           @log "'<span class=\"logname\">#{escapeHtml(@players[msg.pid].name)}</span>' is now '<span class=\"logname\">#{escapeHtml(msg.name)}</span>'."
           @players[msg.pid].name = msg.name
           @broadcast()
@@ -288,6 +289,11 @@ class Table
         if @players[msg.pid]? and (msg.pid == @owner) and msg.name?
           @log "The table is now named '#{escapeHtml(msg.name)}'."
           @name = msg.name
+          @broadcast()
+
+      when 'chooseAvatar'
+        if @players[msg.pid]? and msg.avatar?
+          @players[msg.pid].avatar = msg.avatar
           @broadcast()
 
       when 'changeOwner'
@@ -505,6 +511,7 @@ class Table
         players.push {
           pid: pid
           name: player.name
+          avatar: player.avatar
           score: player.score
           bid: player.bid
           tricks: player.tricks

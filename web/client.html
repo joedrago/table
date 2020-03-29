@@ -281,14 +281,28 @@
       border-radius: 20px;
 
       vertical-align: middle;
-      line-height: 45px;
+      line-height: 50px;
       text-align: center;
       font-size: 1.2em;
       color: #fff;
     }
 
-    .spothand {
+    .spotline {
+      text-align: left;
       font-size: 2em;
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    .spotavatar {
+        display: inline-block;
+        text-align: center;
+        width: 50%;
+    }
+    .spothand {
+        display: inline-block;
+        text-align: center;
+        width: 50%;
     }
 
     .spotActive {
@@ -403,6 +417,34 @@
         position: relative;
         top: 1px;
     }
+
+    #chooseAvatar {
+        display: none;
+
+        position: fixed;
+        left: 100px;
+        top: 100px;
+        right: 100px;
+        bottom: 100px;
+        border: 1px solid #fff;
+
+        overflow: auto;
+        word-wrap: break-word;
+
+        background-color: #444;
+    }
+
+    .chooseavataritem {
+        display: inline-block;
+        padding: 10px;
+    }
+
+    .activeAvatar {
+        background-color: #666;
+        border: 1px dashed black;
+        border-radius: 10px;
+    }
+
 </style>
 </head>
 <body>
@@ -422,6 +464,8 @@
 <div id="topright"><div id="connection"></div><div id="admin"></div></div>
 
 <div id="center"><div id="pile"><div id="last"></div></div><div class="spotPassL" id="spotpass0">Pass!</div><div class="spotPassL" id="spotpass1">Pass!</div><div class="spotPassL" id="spotpass2">Pass!</div><div class="spotPassL" id="spotpass3">Pass!</div><div class="spotPassR" id="spotpass4">Pass!</div><div class="spotPassR" id="spotpass5">Pass!</div><div class="spot" id="spot0"></div><div class="spot" id="spot1"></div><div class="spot" id="spot2"></div><div class="spot" id="spot3"></div><div class="spot" id="spot4"></div><div class="spot" id="spot5"></div></div>
+
+<div id="chooseAvatar"></div>
 
 <script>
     window.table_playerID = "!PLAYERID!";

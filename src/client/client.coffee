@@ -4,6 +4,7 @@ tableID = window.table_tableID
 socket = null
 hand = []
 pile = []
+lastAvatar = ""
 
 CARD_LEFT = 20
 CARD_TOP = 20
@@ -12,6 +13,7 @@ CARD_IMAGE_W = 112
 CARD_IMAGE_H = 158
 CARD_IMAGE_ADV_X = CARD_IMAGE_W
 CARD_IMAGE_ADV_Y = CARD_IMAGE_H
+AVATAR_LIST = ['1f0cf','1f308','1f31e','1f33b','1f340','1f341','1f346','1f383','1f385','1f3a8','1f3a9','1f3ad','1f3ae','1f3af','1f3b2','1f3b3','1f3b7','1f3b8','1f3c4','1f3c8','1f3ca','1f400','1f401','1f402','1f403','1f404','1f405','1f406','1f407','1f408','1f409','1f40a','1f40b','1f410','1f412','1f413','1f414','1f415','1f416','1f417','1f418','1f419','1f41d','1f41e','1f41f','1f420','1f421','1f422','1f423','1f425','1f426','1f427','1f428','1f429','1f42c','1f42d','1f42e','1f42f','1f430','1f431','1f432','1f433','1f434','1f435','1f436','1f437','1f438','1f439','1f43a','1f43b','1f43c','1f466','1f467','1f468','1f469','1f46e','1f470','1f471','1f472','1f473','1f474','1f475','1f476','1f477','1f478','1f479','1f47b','1f47c','1f47d','1f47e','1f47f','1f480','1f482','1f483','1f498','1f4a3','1f4a9','1f601','1f602','1f603','1f604','1f605','1f606','1f607','1f608','1f609','1f60a','1f60b','1f60c','1f60d','1f60e','1f60f','1f610','1f611','1f612','1f613','1f614','1f615','1f616','1f617','1f618','1f619','1f61a','1f61b','1f61c','1f61d','1f61e','1f61f','1f620','1f621','1f622','1f623','1f624','1f625','1f626','1f627','1f628','1f629','1f62a','1f62b','1f62c','1f62d','1f62e','1f62f','1f630','1f631','1f632','1f633','1f634','1f635','1f636','1f637','1f638','1f639','1f63a','1f63b','1f63c','1f63d','1f63e','1f63f','1f640','1f648','1f64a','1f64f','1f6b4','263a','26c4']
 
 escapeHtml = (t) ->
     return t
@@ -545,12 +547,19 @@ updateSpots = ->
     playerIndex = (playerIndexOffset + i) % globalState.players.length
     player = globalState.players[playerIndex]
     if player.playing
-      clippedName = player.name
+      clippedName = escapeHtml(player.name)
       if clippedName.length > 11
         clippedName = clippedName.substr(0, 8) + "..."
+
+      preAvatar = ""
+      postAvatar = ""
+      if player.pid == playerID
+        preAvatar = "<a onclick=\"window.showAvatars()\">"
+        postAvatar = "</a>"
+
       spotHTML = """
-        #{clippedName}<br>
-        <span class="spothand">#{player.count}</span>
+        <div class="spotname">#{clippedName}</div>
+        <div class="spotline"><div class="spotavatar">#{preAvatar}<img src="avatars/#{player.avatar}.png">#{postAvatar}</div><div class="spothand">#{player.count}</div>
       """
       spotIndex = spotIndices[nextSpot]
       nextSpot += 1
@@ -561,6 +570,33 @@ updateSpots = ->
         spotElement.classList.add("spotHighlight")
       else
         spotElement.classList.remove("spotHighlight")
+
+showAvatars = ->
+  updateAvatars()
+  document.getElementById('chooseAvatar').style.display = 'block'
+  return
+
+chooseAvatar = (avatar) ->
+  console.log "choosing avatar: #{avatar}"
+  document.getElementById('chooseAvatar').style.display = 'none'
+  socket.emit 'table', {
+    pid: playerID
+    tid: tableID
+    type: 'chooseAvatar'
+    avatar: avatar
+  }
+  return
+
+updateAvatars = ->
+  console.log "updateAvatars: #{lastAvatar}"
+  avatarHTML = ""
+  for avatar in AVATAR_LIST
+    otherClasses = ""
+    if avatar == lastAvatar
+      otherClasses = " activeAvatar"
+    avatarHTML += "<div class=\"chooseavataritem#{otherClasses}\"><a onclick=\"window.chooseAvatar('#{avatar}')\"><img src=\"avatars/#{avatar}.png\"></a></div>"
+  document.getElementById('chooseAvatar').innerHTML = avatarHTML
+  return
 
 updateState = (newState) ->
   globalState = newState
@@ -591,11 +627,10 @@ updateState = (newState) ->
     playerHTML += "<td class=\"playername\">"
     if player.pid == globalState.owner
       playerHTML += "&#x1F451;"
+    else if globalState.owner == playerID
+      playerHTML += "<a onclick=\"window.changeOwner('#{player.pid}')\">&#x1F537;</a>"
     else
-      if globalState.owner == playerID
-        playerHTML += "<a onclick=\"window.changeOwner('#{player.pid}')\">&#128512;</a>"
-      else
-        playerHTML += "&#128512;"
+      playerHTML += "&#x1F537;"
 
     if player.pid == playerID
       playerHTML += "<a onclick=\"window.renameSelf()\">#{player.name}</a>"
@@ -647,6 +682,16 @@ updateState = (newState) ->
   playerHTML += "</table>"
   document.getElementById('players').innerHTML = playerHTML
 
+  me = null
+  for player in globalState.players
+    if player.pid == playerID
+      me = player
+      break
+  if me != null
+    if lastAvatar != me.avatar
+      lastAvatar = me.avatar
+      updateAvatars()
+
   admin =
   adminHTML = ""
   if globalState.owner == playerID
@@ -671,6 +716,7 @@ init = ->
   window.adjustBid = adjustBid
   window.adjustScore = adjustScore
   window.changeOwner = changeOwner
+  window.chooseAvatar = chooseAvatar
   window.claimTrick = claimTrick
   window.deal = deal
   window.manipulateHand = manipulateHand
@@ -681,6 +727,7 @@ init = ->
   window.resetBids = resetBids
   window.resetScores = resetScores
   window.sendChat = sendChat
+  window.showAvatars = showAvatars
   window.throwSelected = throwSelected
   window.togglePlaying = togglePlaying
   window.undo = undo
@@ -696,6 +743,7 @@ init = ->
 
   prepareChat()
   preloadImages()
+  updateAvatars()
 
   socket.on 'state', (newState) ->
     console.log "State: ", JSON.stringify(newState)
