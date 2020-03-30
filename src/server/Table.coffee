@@ -171,6 +171,7 @@ class Table
         @pileWho = ""
         @turn = ""
         @lastZeroCardPlayerCount = 0
+        @lastThrowSize = 1
         if playingCount > 5
           @log "ERROR: Too many players (#{playingCount}) to deal 13 to everyone."
           return
@@ -201,6 +202,7 @@ class Table
         @pile = []
         @pileWho = ""
         @lastZeroCardPlayerCount = 0
+        @lastThrowSize = 1
         @deck = new ShuffledDeck([9]) # 3 of clubs
         if playingCount != 3
           @log "ERROR: You can only deal 17 to 3 players."
@@ -223,6 +225,7 @@ class Table
         @pileWho = ""
         @turn = ""
         @lastZeroCardPlayerCount = 0
+        @lastThrowSize = 1
         if (playingCount < 3) or (playingCount > 5)
           @log "ERROR: Blackout is a 3-5 player game."
           return
@@ -254,7 +257,7 @@ class Table
 
     return
 
-  playerAfter: (currentPlayer) ->
+  playerAfter: (currentPlayer, autoSkipped = []) ->
     pids = []
     for pid, player of @players
       if player.playing and (player.socket != null)
@@ -270,13 +273,27 @@ class Table
 
     loopIndex = currentIndex
     nextIndex = (currentIndex + 1) % pids.length
+
     while nextIndex != loopIndex
-      if @players[pids[nextIndex]].hand.length > 0
+      if @players[pids[nextIndex]].hand.length >= @lastThrowSize
         return pids[nextIndex]
+      autoSkipped.push @players[pids[nextIndex]].name
       nextIndex = (nextIndex + 1) % pids.length
     if currentPlayer.hand.length > 0
       return currentPlayer.id
     return ""
+
+  logAutoskip: (autoSkipped) ->
+    if autoSkipped.length == 0
+      return
+
+    text = ""
+    for s in autoSkipped
+      if text.length > 0
+        text += ", "
+      text += "<span class=\"logname\">#{escapeHtml(s)}</span>"
+    @log("Skipping: #{text} (not enough cards)")
+    return
 
   msg: (msg) ->
     switch msg.type
@@ -442,23 +459,31 @@ class Table
               y: pileY
             }
 
-          # find next player (returns "" if there is not another turn)
-          @turn = @playerAfter(player)
-          playingCount = @countPlaying()
-          # console.log "@mode #{@mode} pile #{@pile.length} playingCount #{playingCount}"
-          if (@mode == 'blackout') and (@pile.length == playingCount)
-            # someone has to claim the trick
-            @turn = ""
+          @lastThrowSize = msg.selected.length
+
+          @log "<span class=\"logname\">#{escapeHtml(player.name)}</span> throws: #{prettyCardList(msg.selected)}"
 
           zeroCardPlayerCount = 0
           for pid, zeroCardPlayer of @players
             if zeroCardPlayer.playing and (zeroCardPlayer.socket != null) and (zeroCardPlayer.hand.length == 0)
               zeroCardPlayerCount += 1
 
-          @log "<span class=\"logname\">#{escapeHtml(player.name)}</span> throws: #{prettyCardList(msg.selected)}"
+          foundWinner = false
           if (@mode == 'thirteen') and (zeroCardPlayerCount == 1) and (@lastZeroCardPlayerCount != zeroCardPlayerCount)
             @lastZeroCardPlayerCount = zeroCardPlayerCount
             @log "<span class=\"logname\">#{escapeHtml(player.name)}</span> wins!"
+            foundWinner = true
+
+          # find next player (returns "" if there is not another turn)
+          autoSkipped = []
+          @turn = @playerAfter(player, autoSkipped)
+          @logAutoskip(autoSkipped)
+          playingCount = @countPlaying()
+          # console.log "@mode #{@mode} pile #{@pile.length} playingCount #{playingCount}"
+          if (@mode == 'blackout') and (@pile.length == playingCount)
+            # someone has to claim the trick
+            @turn = ""
+
           @pileWho = player.id
           @broadcast()
 
@@ -472,7 +497,9 @@ class Table
             turn: @turn
           }
 
-          @turn = @playerAfter(@players[msg.pid])
+          autoSkipped = []
+          @turn = @playerAfter(@players[msg.pid], autoSkipped)
+          @logAutoskip(autoSkipped)
           @log "<span class=\"logname\">#{escapeHtml(@players[msg.pid].name)}</span> passes."
           for pid, player of @players
             if player.socket != null

@@ -258,6 +258,7 @@
           this.pileWho = "";
           this.turn = "";
           this.lastZeroCardPlayerCount = 0;
+          this.lastThrowSize = 1;
           if (playingCount > 5) {
             this.log(`ERROR: Too many players (${playingCount}) to deal 13 to everyone.`);
             return;
@@ -295,6 +296,7 @@
           this.pile = [];
           this.pileWho = "";
           this.lastZeroCardPlayerCount = 0;
+          this.lastThrowSize = 1;
           this.deck = new ShuffledDeck([9]); // 3 of clubs
           if (playingCount !== 3) {
             this.log("ERROR: You can only deal 17 to 3 players.");
@@ -322,6 +324,7 @@
           this.pileWho = "";
           this.turn = "";
           this.lastZeroCardPlayerCount = 0;
+          this.lastThrowSize = 1;
           if ((playingCount < 3) || (playingCount > 5)) {
             this.log("ERROR: Blackout is a 3-5 player game.");
             return;
@@ -360,7 +363,7 @@
       }
     }
 
-    playerAfter(currentPlayer) {
+    playerAfter(currentPlayer, autoSkipped = []) {
       var currentIndex, k, len, loopIndex, nextIndex, pid, pids, player, playerIndex, ref;
       pids = [];
       ref = this.players;
@@ -384,9 +387,10 @@
       loopIndex = currentIndex;
       nextIndex = (currentIndex + 1) % pids.length;
       while (nextIndex !== loopIndex) {
-        if (this.players[pids[nextIndex]].hand.length > 0) {
+        if (this.players[pids[nextIndex]].hand.length >= this.lastThrowSize) {
           return pids[nextIndex];
         }
+        autoSkipped.push(this.players[pids[nextIndex]].name);
         nextIndex = (nextIndex + 1) % pids.length;
       }
       if (currentPlayer.hand.length > 0) {
@@ -395,8 +399,24 @@
       return "";
     }
 
+    logAutoskip(autoSkipped) {
+      var k, len, s, text;
+      if (autoSkipped.length === 0) {
+        return;
+      }
+      text = "";
+      for (k = 0, len = autoSkipped.length; k < len; k++) {
+        s = autoSkipped[k];
+        if (text.length > 0) {
+          text += ", ";
+        }
+        text += `<span class=\"logname\">${escapeHtml(s)}</span>`;
+      }
+      this.log(`Skipping: ${text} (not enough cards)`);
+    }
+
     msg(msg) {
-      var card, chat, found, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playerName, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap, u, zeroCardPlayer, zeroCardPlayerCount;
+      var autoSkipped, card, chat, found, foundWinner, k, l, len, len1, len2, len3, len4, len5, len6, m, n, newHand, newPile, o, p, pid, pileX, pileY, player, playerName, playingCount, q, raw, rawSelected, rawSelectedIndex, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, removeMap, u, zeroCardPlayer, zeroCardPlayerCount;
       switch (msg.type) {
         case 'renamePlayer':
           if ((this.players[msg.pid] != null) && (msg.name != null)) {
@@ -603,14 +623,8 @@
                 y: pileY
               });
             }
-            // find next player (returns "" if there is not another turn)
-            this.turn = this.playerAfter(player);
-            playingCount = this.countPlaying();
-            // console.log "@mode #{@mode} pile #{@pile.length} playingCount #{playingCount}"
-            if ((this.mode === 'blackout') && (this.pile.length === playingCount)) {
-              // someone has to claim the trick
-              this.turn = "";
-            }
+            this.lastThrowSize = msg.selected.length;
+            this.log(`<span class=\"logname\">${escapeHtml(player.name)}</span> throws: ${prettyCardList(msg.selected)}`);
             zeroCardPlayerCount = 0;
             ref8 = this.players;
             for (pid in ref8) {
@@ -619,10 +633,21 @@
                 zeroCardPlayerCount += 1;
               }
             }
-            this.log(`<span class=\"logname\">${escapeHtml(player.name)}</span> throws: ${prettyCardList(msg.selected)}`);
+            foundWinner = false;
             if ((this.mode === 'thirteen') && (zeroCardPlayerCount === 1) && (this.lastZeroCardPlayerCount !== zeroCardPlayerCount)) {
               this.lastZeroCardPlayerCount = zeroCardPlayerCount;
               this.log(`<span class=\"logname\">${escapeHtml(player.name)}</span> wins!`);
+              foundWinner = true;
+            }
+            // find next player (returns "" if there is not another turn)
+            autoSkipped = [];
+            this.turn = this.playerAfter(player, autoSkipped);
+            this.logAutoskip(autoSkipped);
+            playingCount = this.countPlaying();
+            // console.log "@mode #{@mode} pile #{@pile.length} playingCount #{playingCount}"
+            if ((this.mode === 'blackout') && (this.pile.length === playingCount)) {
+              // someone has to claim the trick
+              this.turn = "";
             }
             this.pileWho = player.id;
             this.broadcast();
@@ -637,7 +662,9 @@
               pid: msg.pid,
               turn: this.turn
             });
-            this.turn = this.playerAfter(this.players[msg.pid]);
+            autoSkipped = [];
+            this.turn = this.playerAfter(this.players[msg.pid], autoSkipped);
+            this.logAutoskip(autoSkipped);
             this.log(`<span class=\"logname\">${escapeHtml(this.players[msg.pid].name)}</span> passes.`);
             ref9 = this.players;
             for (pid in ref9) {
