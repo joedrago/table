@@ -267,7 +267,7 @@
           cardsToDeal = 13;
           fivePlayer = playingCount === 5;
           if (fivePlayer) {
-            cardsToRemove = [6, 7];
+            cardsToRemove = [10, 11];
             cardsToDeal = 10;
           }
           this.deck = new ShuffledDeck(cardsToRemove);
@@ -284,7 +284,7 @@
           firstPlayer = this.whoShouldGoFirst(thirteenRank);
           this.turn = firstPlayer.id;
           if (fivePlayer) {
-            this.log(`Thirteen: Removed red 2s; dealt 10. <span class=\"logname\">${escapeHtml(firstPlayer.name)}</span> should go first.`);
+            this.log(`Thirteen: Removed red 3s; dealt 10. <span class=\"logname\">${escapeHtml(firstPlayer.name)}</span> should go first.`);
           } else {
             this.log(`Thirteen: Dealt 13 to everyone. <span class=\"logname\">${escapeHtml(firstPlayer.name)}</span> should go first.`);
           }

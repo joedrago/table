@@ -179,7 +179,7 @@ class Table
         cardsToDeal = 13
         fivePlayer = (playingCount == 5)
         if fivePlayer
-          cardsToRemove = [6, 7]
+          cardsToRemove = [10, 11]
           cardsToDeal = 10
         @deck = new ShuffledDeck(cardsToRemove)
         for pid, player of @players
@@ -191,7 +191,7 @@ class Table
         firstPlayer = @whoShouldGoFirst(thirteenRank)
         @turn = firstPlayer.id
         if fivePlayer
-          @log "Thirteen: Removed red 2s; dealt 10. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
+          @log "Thirteen: Removed red 3s; dealt 10. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
         else
           @log "Thirteen: Dealt 13 to everyone. <span class=\"logname\">#{escapeHtml(firstPlayer.name)}</span> should go first."
         @broadcast()
