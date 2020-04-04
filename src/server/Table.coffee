@@ -275,6 +275,9 @@ class Table
     nextIndex = (currentIndex + 1) % pids.length
 
     while nextIndex != loopIndex
+      if @players[pids[nextIndex]].id == @pileWho
+        # don't skip the last person who threw something
+        return pids[nextIndex]
       if @players[pids[nextIndex]].hand.length >= @lastThrowSize
         return pids[nextIndex]
       autoSkipped.push @players[pids[nextIndex]].name
@@ -476,6 +479,7 @@ class Table
 
           # find next player (returns "" if there is not another turn)
           autoSkipped = []
+          @pileWho = player.id
           @turn = @playerAfter(player, autoSkipped)
           @logAutoskip(autoSkipped)
           playingCount = @countPlaying()
@@ -484,7 +488,6 @@ class Table
             # someone has to claim the trick
             @turn = ""
 
-          @pileWho = player.id
           @broadcast()
 
       when 'pass'
@@ -499,8 +502,8 @@ class Table
 
           autoSkipped = []
           @turn = @playerAfter(@players[msg.pid], autoSkipped)
-          @logAutoskip(autoSkipped)
           @log "<span class=\"logname\">#{escapeHtml(@players[msg.pid].name)}</span> passes."
+          @logAutoskip(autoSkipped)
           for pid, player of @players
             if player.socket != null
               player.socket.emit 'pass', {

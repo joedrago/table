@@ -387,6 +387,10 @@
       loopIndex = currentIndex;
       nextIndex = (currentIndex + 1) % pids.length;
       while (nextIndex !== loopIndex) {
+        if (this.players[pids[nextIndex]].id === this.pileWho) {
+          // don't skip the last person who threw something
+          return pids[nextIndex];
+        }
         if (this.players[pids[nextIndex]].hand.length >= this.lastThrowSize) {
           return pids[nextIndex];
         }
@@ -641,6 +645,7 @@
             }
             // find next player (returns "" if there is not another turn)
             autoSkipped = [];
+            this.pileWho = player.id;
             this.turn = this.playerAfter(player, autoSkipped);
             this.logAutoskip(autoSkipped);
             playingCount = this.countPlaying();
@@ -649,7 +654,6 @@
               // someone has to claim the trick
               this.turn = "";
             }
-            this.pileWho = player.id;
             this.broadcast();
           }
           break;
@@ -664,8 +668,8 @@
             });
             autoSkipped = [];
             this.turn = this.playerAfter(this.players[msg.pid], autoSkipped);
-            this.logAutoskip(autoSkipped);
             this.log(`<span class=\"logname\">${escapeHtml(this.players[msg.pid].name)}</span> passes.`);
+            this.logAutoskip(autoSkipped);
             ref9 = this.players;
             for (pid in ref9) {
               player = ref9[pid];
