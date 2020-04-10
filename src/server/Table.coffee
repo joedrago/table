@@ -1,3 +1,5 @@
+OWNER_GRACE_PERIOD = 5000
+
 class ShuffledDeck
   constructor: (cardsToRemove = []) ->
     cardsToRemoveMap = {}
@@ -86,6 +88,7 @@ class Table
     @resetAge()
     @players = {}
     @owner = null
+    @ownerTimeout = null
     @deck = new ShuffledDeck()
     @mode = 'thirteen'
     @pile = []
@@ -123,7 +126,11 @@ class Table
         hand: []
       }
     @players[pid].socket = socket
-    if @owner == null
+    if (@owner == pid) and @ownerTimeout?
+      console.log "Owner #{pid} reconnected, canceling timeout"
+      clearTimeout(@ownerTimeout)
+      @ownerTimeout = null
+    else if @owner == null
       @owner = pid
     @broadcast()
 
@@ -132,11 +139,31 @@ class Table
     if @players[pid]?
       @players[pid].socket = null
     if pid == @owner
-      for pid, player of @players
-        if player.socket != null
-          @owner = pid
-          break
+      console.log "Finding new owner in #{OWNER_GRACE_PERIOD} ms..."
+      if @ownerTimeout?
+        clearTimeout(@ownerTimeout)
+      @ownerTimeout = setTimeout =>
+        @findNewOwner()
+      , OWNER_GRACE_PERIOD
     @broadcast()
+
+  findNewOwner: ->
+    console.log "Finding new owner..."
+    for pid, player of @players
+      if (player.socket != null) and (@owner == pid)
+        console.log "Owner #{pid} is still connected, we're good."
+        return
+
+    @owner = null
+    for pid, player of @players
+      if player.socket != null
+        @owner = pid
+        console.log "Granted ownership to #{pid}."
+        break
+    if @owner == null
+      console.log "Nobody is connected, forgetting owner."
+    @broadcast()
+    return
 
   countPlaying: ->
     playingCount = 0

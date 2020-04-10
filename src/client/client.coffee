@@ -57,6 +57,7 @@ undo = ->
   }
 
 reconnect = ->
+  socket.close()
   socket.open()
 
 prepareChat = ->
@@ -765,10 +766,6 @@ init = ->
   console.log "Table ID: #{tableID}"
 
   socket = io()
-  socket.emit 'here', {
-    pid: playerID
-    tid: tableID
-  }
 
   prepareChat()
   preloadImages()
@@ -786,8 +783,13 @@ init = ->
 
   socket.on 'connect', (error) ->
     setConnectionStatus("Connected")
+    socket.emit 'here', {
+      pid: playerID
+      tid: tableID
+    }
   socket.on 'disconnect', ->
     setConnectionStatus("Disconnected", '#ff0000')
+    window.reconnect()
   socket.on 'reconnecting', (attemptNumber) ->
     setConnectionStatus("Connecting... (#{attemptNumber})", '#ffff00')
 
