@@ -1,4 +1,5 @@
 OWNER_GRACE_PERIOD = 5000
+SCORE_TIMEOUT = 2000
 
 class ShuffledDeck
   constructor: (cardsToRemove = []) ->
@@ -89,6 +90,8 @@ class Table
     @players = {}
     @owner = null
     @ownerTimeout = null
+    @scoreTimeout = null
+    @oldScores = {}
     @deck = new ShuffledDeck()
     @mode = 'thirteen'
     @pile = []
@@ -164,6 +167,13 @@ class Table
       console.log "Nobody is connected, forgetting owner."
     @broadcast()
     return
+
+  logNewScores: ->
+    console.log "Logging new scores..."
+    for pid, player of @players
+      if @oldScores[pid]?
+        @log "Score update (<span class=\"logname\">#{escapeHtml(player.name)}</span>): #{@oldScores[pid]} -> #{player.score}"
+    @oldScores = {}
 
   countPlaying: ->
     playingCount = 0
@@ -360,6 +370,13 @@ class Table
       when 'setScore'
         if @players[msg.pid]? and (msg.pid == @owner) and msg.scorepid? and msg.score?
           if @players[msg.scorepid]?
+            if not @oldScores[msg.scorepid]?
+              @oldScores[msg.scorepid] = @players[msg.scorepid].score
+            if @scoreTimeout?
+              clearTimeout(@scoreTimeout)
+            @scoreTimeout = setTimeout =>
+              @logNewScores()
+            , SCORE_TIMEOUT
             @players[msg.scorepid].score = msg.score
             @broadcast()
 
